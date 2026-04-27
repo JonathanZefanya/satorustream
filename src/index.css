@@ -9,6 +9,10 @@
     color-scheme: light;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   * {
     @apply border-slate-200;
   }
@@ -16,10 +20,19 @@
   body {
     @apply min-h-screen bg-slate-50 text-slate-900 antialiased;
     font-family: 'Inter', sans-serif;
+    transition: background-color 180ms ease, color 180ms ease;
     background-image:
       radial-gradient(circle at 10% 8%, rgba(251, 113, 133, 0.2), transparent 32%),
       radial-gradient(circle at 90% 2%, rgba(59, 130, 246, 0.12), transparent 35%),
       linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+    background-image:
+      radial-gradient(circle at 10% 8%, rgba(225, 29, 72, 0.22), transparent 34%),
+      radial-gradient(circle at 90% 2%, rgba(56, 189, 248, 0.14), transparent 36%),
+      linear-gradient(180deg, #020617 0%, #0f172a 100%);
   }
 
   #root {
@@ -36,8 +49,74 @@
     @apply text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl;
   }
 
+  html.dark .section-title {
+    @apply text-slate-100;
+  }
+
   .surface-panel {
     @apply rounded-2xl border border-slate-200 bg-white/95 shadow-soft;
+  }
+
+  html.dark .surface-panel {
+    @apply border-slate-700 bg-slate-900/95;
+  }
+}
+
+@layer utilities {
+  html.dark .bg-white {
+    background-color: rgb(15 23 42 / 1) !important;
+  }
+
+  html.dark .bg-white\/90 {
+    background-color: rgb(15 23 42 / 0.9) !important;
+  }
+
+  html.dark .bg-white\/95 {
+    background-color: rgb(15 23 42 / 0.95) !important;
+  }
+
+  html.dark .bg-slate-50 {
+    background-color: rgb(15 23 42 / 1) !important;
+  }
+
+  html.dark .bg-slate-100 {
+    background-color: rgb(30 41 59 / 1) !important;
+  }
+
+  html.dark .bg-slate-200 {
+    background-color: rgb(51 65 85 / 1) !important;
+  }
+
+  html.dark .text-slate-900 {
+    color: rgb(248 250 252 / 1) !important;
+  }
+
+  html.dark .text-slate-800 {
+    color: rgb(241 245 249 / 1) !important;
+  }
+
+  html.dark .text-slate-700 {
+    color: rgb(226 232 240 / 1) !important;
+  }
+
+  html.dark .text-slate-600 {
+    color: rgb(203 213 225 / 1) !important;
+  }
+
+  html.dark .text-slate-500 {
+    color: rgb(148 163 184 / 1) !important;
+  }
+
+  html.dark .text-slate-400 {
+    color: rgb(100 116 139 / 1) !important;
+  }
+
+  html.dark .border-slate-200 {
+    border-color: rgb(51 65 85 / 1) !important;
+  }
+
+  html.dark .border-slate-200\/70 {
+    border-color: rgb(51 65 85 / 0.7) !important;
   }
 }
 
