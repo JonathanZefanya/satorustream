@@ -6,7 +6,7 @@ import { getCompletePage, getOngoingPage } from '../services/api'
 import type { AnimeItem, PagedItems } from '../types/anime'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
-const MAX_PAGE_FETCH = 60
+const MAX_PAGE_FETCH = 1000
 const CONCURRENT_PAGE_FETCH = 5
 const CACHE_KEY = 'anime-list-cache-v1'
 const CACHE_TTL_MS = 5 * 60 * 1000
