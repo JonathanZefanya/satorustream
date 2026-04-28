@@ -7,6 +7,7 @@ import type { AnimeItem, PagedItems } from '../types/anime'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const MAX_PAGE_FETCH = 60
+const CONCURRENT_PAGE_FETCH = 5
 
 const getInitialChar = (title?: string): string => {
   const firstChar = title?.trim().charAt(0).toUpperCase() ?? '#'
@@ -34,17 +35,37 @@ const fetchAllPages = async (
   fetchPage: (page: number) => Promise<PagedItems<AnimeItem>>,
 ): Promise<AnimeItem[]> => {
   const allItems: AnimeItem[] = []
-  let page = 1
+  const firstPage = await fetchPage(1)
+  allItems.push(...firstPage.items)
 
-  while (page <= MAX_PAGE_FETCH) {
-    const result = await fetchPage(page)
-    allItems.push(...result.items)
-
-    if (!result.pagination?.has_next_page || !result.pagination.next_page) {
-      break
+  const lastPageFromApi = firstPage.pagination?.last_visible_page
+  if (!lastPageFromApi || lastPageFromApi <= 1) {
+    if (!firstPage.pagination?.has_next_page || !firstPage.pagination.next_page) {
+      return allItems
     }
 
-    page = result.pagination.next_page
+    let page = firstPage.pagination.next_page
+    while (page && page <= MAX_PAGE_FETCH) {
+      const result = await fetchPage(page)
+      allItems.push(...result.items)
+
+      if (!result.pagination?.has_next_page || !result.pagination.next_page) {
+        break
+      }
+
+      page = result.pagination.next_page
+    }
+
+    return allItems
+  }
+
+  const lastPage = Math.min(lastPageFromApi, MAX_PAGE_FETCH)
+  const pagesToFetch = Array.from({ length: lastPage - 1 }, (_, index) => index + 2)
+
+  for (let index = 0; index < pagesToFetch.length; index += CONCURRENT_PAGE_FETCH) {
+    const batch = pagesToFetch.slice(index, index + CONCURRENT_PAGE_FETCH)
+    const results = await Promise.all(batch.map((page) => fetchPage(page)))
+    results.forEach((result) => allItems.push(...result.items))
   }
 
   return allItems

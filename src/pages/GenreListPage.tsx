@@ -8,6 +8,8 @@ import { getAnimeByGenre, getGenres } from '../services/api'
 const GenreListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedGenre = searchParams.get('genre') ?? ''
+  const pageParam = Number(searchParams.get('page') ?? '1')
+  const currentPage = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
 
   const {
     data: genres,
@@ -23,6 +25,7 @@ const GenreListPage = () => {
 
     const params = new URLSearchParams(searchParams)
     params.set('genre', genres[0].slug ?? '')
+    params.set('page', '1')
     setSearchParams(params, { replace: true })
   }, [genres, genresLoading, searchParams, selectedGenre, setSearchParams])
 
@@ -31,8 +34,8 @@ const GenreListPage = () => {
       return Promise.resolve({ items: [], pagination: null })
     }
 
-    return getAnimeByGenre(selectedGenre)
-  }, [selectedGenre])
+    return getAnimeByGenre(selectedGenre, currentPage)
+  }, [currentPage, selectedGenre])
 
   const {
     data: genreAnime,
@@ -52,6 +55,13 @@ const GenreListPage = () => {
 
     const params = new URLSearchParams(searchParams)
     params.set('genre', slug)
+    params.set('page', '1')
+    setSearchParams(params)
+  }
+
+  const handleChangePage = (page: number) => {
+    const params = new URLSearchParams(searchParams)
+    params.set('page', String(page))
     setSearchParams(params)
   }
 
@@ -135,9 +145,37 @@ const GenreListPage = () => {
       )}
 
       {!animeLoading && !animeError && (genreAnime?.items.length ?? 0) > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {genreAnime?.items.map((anime) => <AnimeCard key={anime.slug ?? anime.title} anime={anime} />)}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {genreAnime?.items.map((anime) => (
+              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+            ))}
+          </div>
+
+          {genreAnime?.pagination && genreAnime.pagination.last_visible_page > 1 && (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-slate-600">
+              <button
+                type="button"
+                onClick={() => handleChangePage(genreAnime.pagination?.previous_page ?? 1)}
+                disabled={!genreAnime.pagination.has_previous_page}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-200 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Prev
+              </button>
+              <span className="text-xs text-slate-500">
+                Page {currentPage} of {genreAnime.pagination.last_visible_page}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleChangePage(genreAnime.pagination?.next_page ?? currentPage + 1)}
+                disabled={!genreAnime.pagination.has_next_page}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-200 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
