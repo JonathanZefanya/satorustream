@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight, Clapperboard } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { getEpisode } from '../services/api'
+import { getAnimeMeta, recordWatchHistory } from '../utils/watchHistory'
 
 type QualityOption = '360p' | '480p' | '720p'
 
@@ -55,6 +56,21 @@ const WatchPage = () => {
   const { data, loading, error, reload } = useAsyncData(fetchEpisode, {
     enabled: Boolean(endpoint),
   })
+
+  useEffect(() => {
+    if (!data) {
+      return
+    }
+
+    const meta = getAnimeMeta(data.anime?.slug)
+    recordWatchHistory({
+      animeSlug: data.anime?.slug,
+      episodeSlug: endpoint,
+      episodeLabel: data.episode,
+      title: meta?.title,
+      poster: meta?.poster,
+    })
+  }, [data, endpoint])
 
   const providersByQuality = useMemo(() => {
     const providers: Record<QualityOption, ProviderOption[]> = {
@@ -240,6 +256,7 @@ const WatchPage = () => {
             referrerPolicy="no-referrer"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            loading="lazy"
             className="w-full aspect-video rounded-xl bg-slate-950"
           />
         ) : (

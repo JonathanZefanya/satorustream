@@ -16,6 +16,10 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
           src={anime.poster || 'https://placehold.co/480x640?text=No+Image'}
           alt={anime.title || 'Anime poster'}
           loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          width={480}
+          height={640}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
         <span className="absolute left-2 top-2 rounded-md bg-slate-900/85 px-2 py-1 text-[11px] font-semibold text-white">

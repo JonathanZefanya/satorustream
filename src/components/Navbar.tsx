@@ -9,8 +9,9 @@ import {
   Tags,
   TvMinimalPlay,
 } from 'lucide-react'
-import type { FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { loadCachedAnimeList } from '../utils/animeCache'
 
 interface NavbarProps {
   theme: 'light' | 'dark'
@@ -53,17 +54,35 @@ const menuItems = [
 const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [query, setQuery] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
 
   const currentQuery =
     location.pathname === '/search'
       ? (new URLSearchParams(location.search).get('q') ?? '')
       : ''
 
+  useEffect(() => {
+    setQuery(currentQuery)
+  }, [currentQuery])
+
+  const cachedAnime = useMemo(() => loadCachedAnimeList() ?? [], [])
+  const suggestionItems = useMemo(() => {
+    if (!query || query.trim().length < 2) {
+      return []
+    }
+
+    const keyword = query.trim().toLowerCase()
+    return cachedAnime
+      .filter((anime) => (anime.title ?? '').toLowerCase().includes(keyword))
+      .slice(0, 6)
+  }, [cachedAnime, query])
+
+  const showSuggestions = isFocused && suggestionItems.length > 0
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const rawQuery = formData.get('q')
-    const keyword = typeof rawQuery === 'string' ? rawQuery.trim() : ''
+    const keyword = query.trim()
 
     if (!keyword) {
       navigate('/')
@@ -76,16 +95,16 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
   const isLightMode = theme === 'light'
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85">
+    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85">
       <div className="container-app py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link to="/" className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
-            <span className="rounded-xl bg-rose-100 p-2 text-rose-600">
+            <span className="rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 p-2 text-white shadow-sm">
               <TvMinimalPlay className="h-5 w-5" />
             </span>
             <div>
               <p className="text-lg font-extrabold tracking-tight">SatoruStream</p>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Anime streaming explorer</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Your nightly anime orbit</p>
             </div>
           </Link>
 
@@ -93,18 +112,71 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             <form
               key={`${location.pathname}-${location.search}`}
               onSubmit={handleSubmit}
-              className="w-full sm:w-[22rem]"
+              className="relative w-full sm:w-[22rem]"
             >
               <label className="relative block">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   name="q"
                   type="search"
-                  defaultValue={currentQuery}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => {
+                    window.setTimeout(() => setIsFocused(false), 120)
+                  }}
                   placeholder="Search anime..."
                   className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-rose-400/70 dark:focus:ring-rose-900/30"
                 />
               </label>
+
+              {showSuggestions && (
+                <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-950">
+                  <ul className="divide-y divide-slate-100 text-sm text-slate-700 dark:divide-slate-800 dark:text-slate-200">
+                    {suggestionItems.map((anime) => (
+                      <li key={anime.slug ?? anime.title}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsFocused(false)
+                            if (anime.slug) {
+                              navigate(`/anime/${anime.slug}`)
+                              return
+                            }
+
+                            setQuery(anime.title ?? query)
+                            navigate(`/search?q=${encodeURIComponent(anime.title ?? query)}`)
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-rose-50/60"
+                        >
+                          <span className="inline-flex h-9 w-7 items-center justify-center rounded-lg bg-rose-100 text-[11px] font-bold text-rose-600">
+                            {anime.title?.charAt(0).toUpperCase() ?? '#'}
+                          </span>
+                          <span className="flex-1 line-clamp-2 font-medium">
+                            {anime.title ?? 'Untitled Anime'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsFocused(false)
+                          if (!query.trim()) {
+                            return
+                          }
+
+                          navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-rose-600 hover:bg-rose-50/70"
+                      >
+                        Search for "{query.trim()}"
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </form>
 
             <button

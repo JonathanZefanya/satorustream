@@ -1,9 +1,10 @@
 import { ChevronRight, Star } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DetailSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { getDetail } from '../services/api'
+import { recordRecommendations, saveAnimeMeta } from '../utils/watchHistory'
 
 const DetailPage = () => {
   const { endpoint = '' } = useParams()
@@ -12,6 +13,18 @@ const DetailPage = () => {
   const { data: anime, loading, error, reload } = useAsyncData(fetchDetail, {
     enabled: Boolean(endpoint),
   })
+
+  useEffect(() => {
+    if (!anime) {
+      return
+    }
+
+    const animeSlug = endpoint
+    saveAnimeMeta({ slug: animeSlug, title: anime.title, poster: anime.poster })
+    if (anime.recommendations?.length) {
+      recordRecommendations({ slug: animeSlug, title: anime.title }, anime.recommendations)
+    }
+  }, [anime, endpoint])
 
   if (loading) {
     return (
@@ -56,6 +69,11 @@ const DetailPage = () => {
           <img
             src={anime.poster || 'https://placehold.co/640x900?text=No+Image'}
             alt={anime.title || 'Anime poster'}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            width={640}
+            height={900}
             className="aspect-[3/4] w-full rounded-2xl object-cover shadow-soft"
           />
         </div>

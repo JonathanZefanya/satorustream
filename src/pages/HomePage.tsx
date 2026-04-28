@@ -1,8 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import AnimeCard from '../components/AnimeCard'
+import ContinueWatchingCard from '../components/ContinueWatchingCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { getComplete, getOngoing } from '../services/api'
+import { getRecommendationShelf, getWatchHistory } from '../utils/watchHistory'
 
 type HomePayload = {
   ongoing: Awaited<ReturnType<typeof getOngoing>>
@@ -16,9 +18,51 @@ const HomePage = () => {
   }, [])
 
   const { data, loading, error, reload } = useAsyncData(fetchHomeData)
+  const continueWatching = useMemo(() => getWatchHistory().slice(0, 6), [])
+  const recommendationShelf = useMemo(() => getRecommendationShelf(), [])
+  const recommendedItems = recommendationShelf?.items ?? []
 
   return (
     <div className="container-app py-6 sm:py-8">
+      {continueWatching.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Continue</p>
+              <h2 className="section-title">Lanjutkan tontonan</h2>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {continueWatching.map((entry) => (
+              <ContinueWatchingCard
+                key={`${entry.episodeSlug ?? entry.animeSlug ?? entry.watchedAt}`}
+                entry={entry}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {recommendedItems.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">
+                {recommendationShelf?.sourceTitle
+                  ? `Because you watched ${recommendationShelf.sourceTitle}`
+                  : 'Recommendations'}
+              </p>
+              <h2 className="section-title">Rekomendasi buat kamu</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {recommendedItems.map((anime) => (
+              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h1 className="section-title">Ongoing Anime</h1>

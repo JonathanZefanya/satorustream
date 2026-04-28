@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
@@ -42,6 +42,17 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
+  const location = useLocation()
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
+  }, [location.pathname, location.search])
+
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <div className="pointer-events-none fixed inset-x-0 top-[-180px] h-[300px] bg-gradient-to-b from-rose-100/60 to-transparent dark:from-rose-900/25" />

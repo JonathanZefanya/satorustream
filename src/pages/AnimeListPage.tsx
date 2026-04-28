@@ -4,12 +4,11 @@ import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { getCompletePage, getOngoingPage } from '../services/api'
 import type { AnimeItem, PagedItems } from '../types/anime'
+import { loadCachedAnimeList, saveCachedAnimeList } from '../utils/animeCache'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const MAX_PAGE_FETCH = 1000
 const CONCURRENT_PAGE_FETCH = 5
-const CACHE_KEY = 'anime-list-cache-v1'
-const CACHE_TTL_MS = 5 * 60 * 1000
 
 const getInitialChar = (title?: string): string => {
   const firstChar = title?.trim().charAt(0).toUpperCase() ?? '#'
@@ -31,37 +30,6 @@ const dedupeAnime = (items: AnimeItem[]): AnimeItem[] => {
   })
 
   return result
-}
-
-const loadCachedAnime = (): AnimeItem[] | null => {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) {
-      return null
-    }
-
-    const parsed = JSON.parse(raw) as { items: AnimeItem[]; savedAt: number }
-    if (!parsed?.items?.length) {
-      return null
-    }
-
-    if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
-      return null
-    }
-
-    return parsed.items
-  } catch {
-    return null
-  }
-}
-
-const saveCachedAnime = (items: AnimeItem[]): void => {
-  try {
-    const payload = JSON.stringify({ items, savedAt: Date.now() })
-    localStorage.setItem(CACHE_KEY, payload)
-  } catch {
-    // Ignore cache write failures.
-  }
 }
 
 const fetchAllPages = async (
@@ -106,7 +74,7 @@ const fetchAllPages = async (
 
 const AnimeListPage = () => {
   const [selectedLetter, setSelectedLetter] = useState<string>('A')
-  const cachedAnime = useMemo(() => loadCachedAnime(), [])
+  const cachedAnime = useMemo(() => loadCachedAnimeList(), [])
 
   const fetchAllAnime = useCallback(async () => {
     const [ongoing, complete] = await Promise.all([
@@ -118,7 +86,7 @@ const AnimeListPage = () => {
       (a.title ?? '').localeCompare(b.title ?? ''),
     )
 
-    saveCachedAnime(merged)
+    saveCachedAnimeList(merged)
     return merged
   }, [])
 
