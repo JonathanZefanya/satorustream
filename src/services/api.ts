@@ -127,6 +127,31 @@ export const getOngoing = async (page = 1): Promise<AnimeItem[]> => {
   return result.items
 }
 
+export const getOngoingSchedule = async (): Promise<AnimeItem[]> => {
+  const firstPage = await getOngoingPage(1)
+  const lastPage = firstPage.pagination?.last_visible_page ?? 1
+
+  if (lastPage <= 1) {
+    return firstPage.items
+  }
+
+  const pages = Array.from({ length: lastPage - 1 }, (_, index) => index + 2)
+  const pageResults = await Promise.all(pages.map((page) => getOngoingPage(page)))
+  const allItems = [firstPage.items, ...pageResults.map((result) => result.items)].flat()
+
+  const seen = new Set<string>()
+  return allItems.filter((item) => {
+    const key = item.slug || item.title || ''
+
+    if (!key || seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
+}
+
 export const getComplete = async (page = 1): Promise<AnimeItem[]> => {
   const result = await getCompletePage(page)
   return result.items

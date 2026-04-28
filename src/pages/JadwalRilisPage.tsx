@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
-import { getOngoing } from '../services/api'
+import { getOngoingSchedule } from '../services/api'
 import type { AnimeItem } from '../types/anime'
 
 const DAY_ORDER = [
@@ -36,7 +36,7 @@ const normalizeDayLabel = (day?: string): string => {
 }
 
 const JadwalRilisPage = () => {
-  const fetchSchedule = useCallback(() => getOngoing(), [])
+  const fetchSchedule = useCallback(() => getOngoingSchedule(), [])
   const { data, loading, error, reload } = useAsyncData(fetchSchedule)
 
   const groupedSchedule = useMemo(() => {
