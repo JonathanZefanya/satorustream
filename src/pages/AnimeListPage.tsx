@@ -8,6 +8,8 @@ import type { AnimeItem, PagedItems } from '../types/anime'
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const MAX_PAGE_FETCH = 60
 const CONCURRENT_PAGE_FETCH = 5
+const CACHE_KEY = 'anime-list-cache-v1'
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 const getInitialChar = (title?: string): string => {
   const firstChar = title?.trim().charAt(0).toUpperCase() ?? '#'
@@ -29,6 +31,37 @@ const dedupeAnime = (items: AnimeItem[]): AnimeItem[] => {
   })
 
   return result
+}
+
+const loadCachedAnime = (): AnimeItem[] | null => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) {
+      return null
+    }
+
+    const parsed = JSON.parse(raw) as { items: AnimeItem[]; savedAt: number }
+    if (!parsed?.items?.length) {
+      return null
+    }
+
+    if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
+      return null
+    }
+
+    return parsed.items
+  } catch {
+    return null
+  }
+}
+
+const saveCachedAnime = (items: AnimeItem[]): void => {
+  try {
+    const payload = JSON.stringify({ items, savedAt: Date.now() })
+    localStorage.setItem(CACHE_KEY, payload)
+  } catch {
+    // Ignore cache write failures.
+  }
 }
 
 const fetchAllPages = async (
@@ -73,6 +106,7 @@ const fetchAllPages = async (
 
 const AnimeListPage = () => {
   const [selectedLetter, setSelectedLetter] = useState<string>('A')
+  const cachedAnime = useMemo(() => loadCachedAnime(), [])
 
   const fetchAllAnime = useCallback(async () => {
     const [ongoing, complete] = await Promise.all([
@@ -80,12 +114,17 @@ const AnimeListPage = () => {
       fetchAllPages(getCompletePage),
     ])
 
-    return dedupeAnime([...ongoing, ...complete]).sort((a, b) =>
+    const merged = dedupeAnime([...ongoing, ...complete]).sort((a, b) =>
       (a.title ?? '').localeCompare(b.title ?? ''),
     )
+
+    saveCachedAnime(merged)
+    return merged
   }, [])
 
-  const { data, loading, error, reload } = useAsyncData(fetchAllAnime)
+  const { data, loading, error, reload } = useAsyncData(fetchAllAnime, {
+    initialData: cachedAnime ?? undefined,
+  })
 
   const filteredAnime = useMemo(() => {
     return (data ?? []).filter((anime) => getInitialChar(anime.title) === selectedLetter)
@@ -131,7 +170,7 @@ const AnimeListPage = () => {
         </div>
       </div>
 
-      {loading && (
+      {loading && !data && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           <CardSkeleton count={12} />
         </div>
@@ -150,7 +189,7 @@ const AnimeListPage = () => {
         </div>
       )}
 
-      {!loading && !error && (filteredAnime.length ?? 0) > 0 && (
+      {!error && (filteredAnime.length ?? 0) > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {filteredAnime.map((anime) => (
             <AnimeCard key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`} anime={anime} />
