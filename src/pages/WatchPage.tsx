@@ -36,6 +36,16 @@ const getQualityFromResolution = (resolution?: string): QualityOption | null => 
   return null
 }
 
+const isIframeBlockedProvider = (provider?: ProviderOption | null): boolean => {
+  if (!provider) {
+    return false
+  }
+
+  const target = `${provider.provider} ${provider.url}`.toLowerCase()
+  const blockedHints = ['odfiles', 'pixeldrain', 'pdrain', 'kfiles']
+  return blockedHints.some((hint) => target.includes(hint))
+}
+
 const WatchPage = () => {
   const { endpoint = '' } = useParams()
   const [selectedQuality, setSelectedQuality] = useState<QualityOption>('360p')
@@ -114,7 +124,8 @@ const WatchPage = () => {
     return activeProviders.find((provider) => provider.key === pickedProviderKey) ?? activeProviders[0] ?? null
   }, [activeProviders, activeQuality, selectedProviderKey])
 
-  const activePlayerUrl = activeProvider?.url ?? null
+  const isBlockedProvider = useMemo(() => isIframeBlockedProvider(activeProvider), [activeProvider])
+  const activePlayerUrl = !isBlockedProvider ? activeProvider?.url ?? null : null
 
   if (loading) {
     return (
@@ -226,6 +237,7 @@ const WatchPage = () => {
           <iframe
             src={activePlayerUrl}
             title={data.episode}
+            referrerPolicy="no-referrer"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="w-full aspect-video rounded-xl bg-slate-950"
@@ -234,7 +246,23 @@ const WatchPage = () => {
           <div className="flex w-full aspect-video items-center justify-center rounded-xl bg-slate-100 text-slate-600">
             <div className="text-center">
               <Clapperboard className="mx-auto h-8 w-8" />
-              <p className="mt-2 text-sm">No stream source available.</p>
+              {isBlockedProvider && activeProvider ? (
+                <>
+                  <p className="mt-2 text-sm">
+                    Provider ini memblokir pemutaran di dalam aplikasi (refused to connect).
+                  </p>
+                  <a
+                    href={activeProvider.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+                  >
+                    Buka di tab baru
+                  </a>
+                </>
+              ) : (
+                <p className="mt-2 text-sm">No stream source available.</p>
+              )}
             </div>
           </div>
         )}
