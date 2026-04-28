@@ -27,12 +27,17 @@ const getDayRank = (day: string): number => {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }
 
-const normalizeDayLabel = (day?: string): string => {
+const normalizeDayLabel = (day?: string): string | null => {
   if (!day || !day.trim()) {
-    return 'Lainnya'
+    return null
   }
 
-  return day
+  const normalized = day.trim()
+  if (normalized.toLowerCase() === 'none') {
+    return null
+  }
+
+  return normalized
 }
 
 const JadwalRilisPage = () => {
@@ -45,6 +50,10 @@ const JadwalRilisPage = () => {
 
     source.forEach((anime) => {
       const label = normalizeDayLabel(anime.release_day)
+      if (!label) {
+        return
+      }
+
       const current = map.get(label) ?? []
       current.push(anime)
       map.set(label, current)
