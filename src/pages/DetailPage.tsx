@@ -20,9 +20,9 @@ const DetailPage = () => {
     }
 
     const animeSlug = endpoint
-    saveAnimeMeta({ slug: animeSlug, title: anime.title, poster: anime.poster })
+    saveAnimeMeta({ slug: animeSlug, title: anime.title, poster: anime.poster, genres: anime.genres })
     if (anime.recommendations?.length) {
-      recordRecommendations({ slug: animeSlug, title: anime.title }, anime.recommendations)
+      recordRecommendations({ slug: animeSlug, title: anime.title, genres: anime.genres }, anime.recommendations)
     }
   }, [anime, endpoint])
 

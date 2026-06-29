@@ -11,6 +11,7 @@ type AnimeMeta = {
   slug: string
   title?: string
   poster?: string
+  genres?: AnimeItem['genres']
   updatedAt: number
 }
 
@@ -23,11 +24,12 @@ export type WatchHistoryEntry = {
   watchedAt: number
 }
 
-type RecommendationShelf = {
+export type RecommendationShelf = {
   sourceTitle?: string
   sourceSlug?: string
+  sourceGenres?: AnimeItem['genres']
   updatedAt: number
-  items: Pick<AnimeItem, 'slug' | 'title' | 'poster'>[]
+  items: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>[]
 }
 
 const readJson = <T>(key: string): T | null => {
@@ -51,7 +53,7 @@ const writeJson = (key: string, value: unknown) => {
   }
 }
 
-export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster'>) => {
+export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>) => {
   if (!anime.slug) {
     return
   }
@@ -61,6 +63,7 @@ export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster'
     slug: anime.slug,
     title: anime.title,
     poster: anime.poster,
+    genres: anime.genres,
     updatedAt: Date.now(),
   }
 
@@ -109,7 +112,7 @@ export const getWatchHistory = (): WatchHistoryEntry[] => {
 }
 
 export const recordRecommendations = (
-  source: Pick<AnimeItem, 'slug' | 'title'>,
+  source: Pick<AnimeItem, 'slug' | 'title' | 'genres'>,
   items: AnimeItem[],
 ) => {
   const normalized = items
@@ -117,6 +120,7 @@ export const recordRecommendations = (
       slug: item.slug,
       title: item.title,
       poster: item.poster,
+      genres: item.genres,
     }))
     .filter((item) => item.slug || item.title)
 
@@ -140,6 +144,7 @@ export const recordRecommendations = (
   const shelf: RecommendationShelf = {
     sourceTitle: source.title,
     sourceSlug: source.slug,
+    sourceGenres: source.genres,
     updatedAt: Date.now(),
     items: deduped.slice(0, RECOMMENDATION_LIMIT),
   }
