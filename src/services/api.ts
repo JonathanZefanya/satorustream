@@ -96,6 +96,75 @@ const withPage = (basePath: string, page: number): string => {
   return page > 1 ? `${basePath}/${page}` : basePath
 }
 
+const getEndpointFromValue = (value?: string, section?: 'anime' | 'episode'): string | undefined => {
+  const cleaned = value?.trim()
+
+  if (!cleaned) {
+    return undefined
+  }
+
+  const normalized = cleaned.replace(/^https?:\/(?!\/)/i, (match) => `${match}/`)
+
+  try {
+    const url = new URL(normalized)
+    const parts = url.pathname.split('/').filter(Boolean)
+
+    if (section) {
+      const sectionIndex = parts.indexOf(section)
+      return sectionIndex >= 0 ? parts[sectionIndex + 1] : undefined
+    }
+
+    return parts.at(-1)
+  } catch {
+    if (cleaned.includes('/')) {
+      const parts = cleaned.split('/').filter(Boolean)
+      const sectionIndex = section ? parts.indexOf(section) : -1
+
+      if (section && sectionIndex >= 0) {
+        return parts[sectionIndex + 1]
+      }
+
+      return section ? undefined : parts.at(-1)
+    }
+
+    return section ? undefined : cleaned
+  }
+}
+
+const normalizeEpisodeDetail = (data: EpisodeApiPayload): EpisodeDetail => {
+  const animeSlug =
+    getEndpointFromValue(data.anime?.otakudesu_url, 'anime') ??
+    getEndpointFromValue(data.anime?.slug, 'anime') ??
+    (!data.anime?.slug?.includes('/') ? data.anime?.slug : undefined)
+
+  return {
+    ...data,
+    anime: {
+      ...data.anime,
+      slug: animeSlug,
+    },
+    next_episode: data.next_episode
+      ? {
+          ...data.next_episode,
+          slug:
+            getEndpointFromValue(data.next_episode.otakudesu_url, 'episode') ??
+            getEndpointFromValue(data.next_episode.slug, 'episode') ??
+            getEndpointFromValue(data.next_episode.slug),
+        }
+      : null,
+    previous_episode: data.previous_episode
+      ? {
+          ...data.previous_episode,
+          slug:
+            getEndpointFromValue(data.previous_episode.otakudesu_url, 'episode') ??
+            getEndpointFromValue(data.previous_episode.slug, 'episode') ??
+            getEndpointFromValue(data.previous_episode.slug),
+        }
+      : null,
+    iframe_url: data.stream_url ?? '',
+  }
+}
+
 export const getOngoingPage = async (page = 1): Promise<PagedItems<AnimeItem>> => {
   const result = await getEnvelope<AnimeItem[]>(withPage(`${API_PREFIX}/ongoing-anime`, page))
 
@@ -165,11 +234,7 @@ export const getDetail = async (endpoint: string): Promise<AnimeDetail> => {
 export const getEpisode = async (endpoint: string): Promise<EpisodeDetail> => {
   const slug = encodeSegment(endpoint, 'Episode endpoint')
   const data = await getPayload<EpisodeApiPayload>(`${API_PREFIX}/episode/${slug}`)
-
-  return {
-    ...data,
-    iframe_url: data.stream_url ?? '',
-  }
+  return normalizeEpisodeDetail(data)
 }
 
 export const searchAnime = async (query: string): Promise<AnimeItem[]> => {
