@@ -1,9 +1,13 @@
-import { ChevronLeft, ChevronRight, Clapperboard } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clapperboard, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
-import { getEpisode } from '../services/api'
-import { getAnimeMeta, recordWatchHistory } from '../utils/watchHistory'
+import { useAuth } from '../contexts/authContext'
+import { getEpisode, getStreamServer } from '../services/api'
+import { recordHistory } from '../services/userLibrary'
+import type { StreamServer } from '../types/anime'
+import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
+import { getAnimeMeta } from '../utils/watchHistory'
 
 type QualityOption = '360p' | '480p' | '720p'
 
@@ -12,6 +16,11 @@ type ProviderOption = {
   provider: string
   url: string
 }
+
+/** Sumber yang sedang diputar: server streaming, atau tautan unduhan. */
+type PlayerMode = 'server' | 'download'
+
+const DEFAULT_SERVER_KEY = 'default'
 
 const QUALITY_OPTIONS: QualityOption[] = ['360p', '480p', '720p']
 
@@ -37,40 +46,70 @@ const getQualityFromResolution = (resolution?: string): QualityOption | null => 
   return null
 }
 
-const isIframeBlockedProvider = (provider?: ProviderOption | null): boolean => {
-  if (!provider) {
+const isIframeBlockedProvider = (url?: string | null): boolean => {
+  if (!url) {
     return false
   }
 
-  const target = `${provider.provider} ${provider.url}`.toLowerCase()
+  const target = url.toLowerCase()
   const blockedHints = ['odfiles', 'pixeldrain', 'pdrain', 'kfiles']
   return blockedHints.some((hint) => target.includes(hint))
 }
 
 const WatchPage = () => {
   const { endpoint = '' } = useParams()
+  const { user } = useAuth()
   const [selectedQuality, setSelectedQuality] = useState<QualityOption>('360p')
   const [selectedProviderKey, setSelectedProviderKey] = useState<Partial<Record<QualityOption, string>>>({})
+  const [playerMode, setPlayerMode] = useState<PlayerMode>('server')
+  const [selectedServerKey, setSelectedServerKey] = useState<string>(DEFAULT_SERVER_KEY)
+  const [serverUrls, setServerUrls] = useState<Record<string, string>>({})
+  const [serverLoading, setServerLoading] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const fetchEpisode = useCallback(() => getEpisode(endpoint), [endpoint])
   const { data, loading, error, reload } = useAsyncData(fetchEpisode, {
     enabled: Boolean(endpoint),
   })
 
+  // Reset pilihan server setiap ganti episode. Disesuaikan saat render (bukan
+  // di effect) supaya tidak memicu render berantai.
+  const [renderedEndpoint, setRenderedEndpoint] = useState(endpoint)
+  if (renderedEndpoint !== endpoint) {
+    setRenderedEndpoint(endpoint)
+    setPlayerMode('server')
+    setSelectedServerKey(DEFAULT_SERVER_KEY)
+    setServerUrls({})
+    setServerError(null)
+  }
+
+  const animeSlug = data?.anime?.slug ?? lookupAnimeSlug(endpoint)
+
   useEffect(() => {
     if (!data) {
       return
     }
 
-    const meta = getAnimeMeta(data.anime?.slug)
-    recordWatchHistory({
-      animeSlug: data.anime?.slug,
-      episodeSlug: endpoint,
-      episodeLabel: data.episode,
-      title: meta?.title,
-      poster: meta?.poster,
-    })
-  }, [data, endpoint])
+    // Episode tetangga berasal dari anime yang sama — catat supaya navigasi
+    // prev/next tidak kehilangan induknya.
+    rememberEpisodeAnime(animeSlug, [
+      endpoint,
+      data.previous_episode?.slug,
+      data.next_episode?.slug,
+    ])
+
+    const meta = getAnimeMeta(animeSlug)
+    void recordHistory(
+      {
+        animeSlug,
+        episodeSlug: endpoint,
+        episodeLabel: data.episode,
+        title: meta?.title,
+        poster: meta?.poster,
+      },
+      user?.id,
+    )
+  }, [animeSlug, data, endpoint, user?.id])
 
   const providersByQuality = useMemo(() => {
     const providers: Record<QualityOption, ProviderOption[]> = {
@@ -80,16 +119,6 @@ const WatchPage = () => {
     }
 
     const seen = new Set<string>()
-
-    if (data?.iframe_url) {
-      const key = `360p-default-${data.iframe_url}`
-      seen.add(key)
-      providers['360p'].push({
-        key,
-        provider: 'Default Stream',
-        url: data.iframe_url,
-      })
-    }
 
     const mappedDownloads = [
       ...(data?.download_urls?.mp4 ?? []).map((item) => ({ ...item, format: 'mp4' as const })),
@@ -140,8 +169,48 @@ const WatchPage = () => {
     return activeProviders.find((provider) => provider.key === pickedProviderKey) ?? activeProviders[0] ?? null
   }, [activeProviders, activeQuality, selectedProviderKey])
 
-  const isBlockedProvider = useMemo(() => isIframeBlockedProvider(activeProvider), [activeProvider])
-  const activePlayerUrl = !isBlockedProvider ? activeProvider?.url ?? null : null
+  const servers = data?.servers ?? []
+
+  const handlePickServer = async (server: StreamServer | null) => {
+    setPlayerMode('server')
+    setServerError(null)
+
+    if (!server) {
+      setSelectedServerKey(DEFAULT_SERVER_KEY)
+      return
+    }
+
+    setSelectedServerKey(server.serverId)
+
+    if (serverUrls[server.serverId]) {
+      return
+    }
+
+    setServerLoading(true)
+
+    try {
+      const url = await getStreamServer(server)
+      setServerUrls((previous) => ({ ...previous, [server.serverId]: url }))
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Gagal memuat server ini.')
+    } finally {
+      setServerLoading(false)
+    }
+  }
+
+  const activeServerUrl =
+    selectedServerKey === DEFAULT_SERVER_KEY ? data?.iframe_url : serverUrls[selectedServerKey]
+
+  const rawPlayerUrl = playerMode === 'server' ? activeServerUrl : activeProvider?.url
+  const isBlockedProvider = playerMode === 'download' && isIframeBlockedProvider(rawPlayerUrl)
+  const activePlayerUrl = isBlockedProvider ? null : rawPlayerUrl || null
+
+  const activeSourceLabel =
+    playerMode === 'server'
+      ? selectedServerKey === DEFAULT_SERVER_KEY
+        ? 'Default Stream'
+        : (servers.find((server) => server.serverId === selectedServerKey)?.title ?? 'Server')
+      : activeProvider?.provider
 
   if (loading) {
     return (
@@ -186,6 +255,53 @@ const WatchPage = () => {
   return (
     <div className="container-app py-6 sm:py-8">
       <div className="surface-panel overflow-hidden p-3 sm:p-4">
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Server streaming</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePickServer(null)}
+              disabled={!data.iframe_url}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                playerMode === 'server' && selectedServerKey === DEFAULT_SERVER_KEY
+                  ? 'border-rose-300 bg-rose-50 text-rose-600'
+                  : data.iframe_url
+                    ? 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
+                    : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              Default
+            </button>
+
+            {servers.map((server) => {
+              const isSelected = playerMode === 'server' && selectedServerKey === server.serverId
+
+              return (
+                <button
+                  key={server.serverId}
+                  type="button"
+                  onClick={() => void handlePickServer(server)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                    isSelected
+                      ? 'border-rose-300 bg-rose-50 text-rose-600'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
+                  }`}
+                >
+                  {isSelected && serverLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  {server.title}
+                </button>
+              )
+            })}
+          </div>
+
+          {serverError ? <p className="mt-2 text-xs text-rose-600">{serverError}</p> : null}
+          {servers.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">
+              Server alternatif tidak tersedia untuk episode ini.
+            </p>
+          ) : null}
+        </div>
+
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Quality</p>
           {QUALITY_OPTIONS.map((quality) => {
@@ -220,13 +336,14 @@ const WatchPage = () => {
           {activeProviders.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-2">
               {activeProviders.map((provider) => {
-                const isSelected = activeProvider?.key === provider.key
+                const isSelected = playerMode === 'download' && activeProvider?.key === provider.key
 
                 return (
                   <button
                     key={provider.key}
                     type="button"
                     onClick={() => {
+                      setPlayerMode('download')
                       setSelectedQuality(activeQuality)
                       setSelectedProviderKey((previous) => ({
                         ...previous,
@@ -262,23 +379,32 @@ const WatchPage = () => {
         ) : (
           <div className="flex w-full aspect-video items-center justify-center rounded-xl bg-slate-100 text-slate-600">
             <div className="text-center">
-              <Clapperboard className="mx-auto h-8 w-8" />
-              {isBlockedProvider && activeProvider ? (
+              {serverLoading ? (
                 <>
-                  <p className="mt-2 text-sm">
-                    Provider ini memblokir pemutaran di dalam aplikasi (refused to connect).
-                  </p>
-                  <a
-                    href={activeProvider.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
-                  >
-                    Buka di tab baru
-                  </a>
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                  <p className="mt-2 text-sm">Memuat server...</p>
                 </>
               ) : (
-                <p className="mt-2 text-sm">No stream source available.</p>
+                <>
+                  <Clapperboard className="mx-auto h-8 w-8" />
+                  {isBlockedProvider && activeProvider ? (
+                    <>
+                      <p className="mt-2 text-sm">
+                        Provider ini memblokir pemutaran di dalam aplikasi (refused to connect).
+                      </p>
+                      <a
+                        href={activeProvider.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+                      >
+                        Buka di tab baru
+                      </a>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm">No stream source available.</p>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -286,12 +412,11 @@ const WatchPage = () => {
 
         <h1 className="mt-4 text-lg font-bold text-slate-900 sm:text-xl">{data.episode}</h1>
 
-        {activeProvider ? (
+        {activeSourceLabel ? (
           <p className="mt-2 text-xs text-slate-500">
-            Provider aktif: <span className="font-semibold text-slate-700">{activeProvider.provider}</span>
+            Sumber aktif: <span className="font-semibold text-slate-700">{activeSourceLabel}</span>
           </p>
         ) : null}
-
 
         <div className="mt-4 flex flex-wrap gap-2">
           {data.has_previous_episode && data.previous_episode?.slug ? (
@@ -309,9 +434,9 @@ const WatchPage = () => {
             </span>
           )}
 
-          {data.anime.slug ? (
+          {animeSlug ? (
             <Link
-              to={`/anime/${data.anime.slug}`}
+              to={`/anime/${animeSlug}`}
               className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
             >
               Back to Anime

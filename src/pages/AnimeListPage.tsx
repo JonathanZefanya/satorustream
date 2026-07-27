@@ -1,10 +1,16 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
-import { getCompletePage, getOngoingPage } from '../services/api'
+import { getAnimeCollections, getCompletePage, getOngoingPage } from '../services/api'
 import type { AnimeItem, PagedItems } from '../types/anime'
-import { loadCachedAnimeList, saveCachedAnimeList } from '../utils/animeCache'
+import {
+  loadCachedAnimeList,
+  loadCachedPosterIndex,
+  saveCachedAnimeList,
+  saveCachedPosterIndex,
+  type PosterIndex,
+} from '../utils/animeCache'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const MAX_PAGE_FETCH = 1000
@@ -72,17 +78,35 @@ const fetchAllPages = async (
   return allItems
 }
 
+/**
+ * Kumpulkan poster dari halaman ongoing + completed. Berjalan di latar belakang
+ * karena butuh banyak request; daftar A-Z sendiri sudah tampil lebih dulu.
+ */
+const buildPosterIndex = async (): Promise<PosterIndex> => {
+  const [ongoing, complete] = await Promise.all([
+    fetchAllPages(getOngoingPage),
+    fetchAllPages(getCompletePage),
+  ])
+
+  const index: PosterIndex = {}
+
+  ;[...ongoing, ...complete].forEach((anime) => {
+    if (anime.slug && anime.poster && !index[anime.slug]) {
+      index[anime.slug] = anime.poster
+    }
+  })
+
+  return index
+}
+
 const AnimeListPage = () => {
   const [selectedLetter, setSelectedLetter] = useState<string>('A')
   const cachedAnime = useMemo(() => loadCachedAnimeList(), [])
+  const [posterIndex, setPosterIndex] = useState<PosterIndex>(() => loadCachedPosterIndex() ?? {})
 
   const fetchAllAnime = useCallback(async () => {
-    const [ongoing, complete] = await Promise.all([
-      fetchAllPages(getOngoingPage),
-      fetchAllPages(getCompletePage),
-    ])
-
-    const merged = dedupeAnime([...ongoing, ...complete]).sort((a, b) =>
+    const collections = await getAnimeCollections()
+    const merged = dedupeAnime(collections.flatMap((collection) => collection.items)).sort((a, b) =>
       (a.title ?? '').localeCompare(b.title ?? ''),
     )
 
@@ -94,9 +118,43 @@ const AnimeListPage = () => {
     initialData: cachedAnime ?? undefined,
   })
 
+  const hasPosterIndex = Object.keys(posterIndex).length > 0
+
+  useEffect(() => {
+    if (hasPosterIndex) {
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const index = await buildPosterIndex()
+
+        if (cancelled) {
+          return
+        }
+
+        setPosterIndex(index)
+        saveCachedPosterIndex(index)
+      } catch {
+        // Poster bersifat pelengkap — daftar tetap bisa dipakai tanpa poster.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasPosterIndex])
+
   const filteredAnime = useMemo(() => {
-    return (data ?? []).filter((anime) => getInitialChar(anime.title) === selectedLetter)
-  }, [data, selectedLetter])
+    return (data ?? [])
+      .filter((anime) => getInitialChar(anime.title) === selectedLetter)
+      .map((anime) => {
+        const poster = anime.poster || (anime.slug ? posterIndex[anime.slug] : undefined)
+        return poster === anime.poster ? anime : { ...anime, poster }
+      })
+  }, [data, posterIndex, selectedLetter])
 
   const title = useMemo(() => {
     if (selectedLetter === '#') {

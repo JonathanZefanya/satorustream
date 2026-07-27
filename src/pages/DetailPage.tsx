@@ -2,12 +2,16 @@ import { ChevronRight, Star } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DetailSkeleton } from '../components/Skeletons'
+import WishlistButton from '../components/WishlistButton'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSource } from '../contexts/sourceContext'
 import { getDetail } from '../services/api'
+import { rememberEpisodeAnime } from '../utils/episodeMap'
 import { recordRecommendations, saveAnimeMeta } from '../utils/watchHistory'
 
 const DetailPage = () => {
   const { endpoint = '' } = useParams()
+  const { source, capabilities } = useSource()
 
   const fetchDetail = useCallback(() => getDetail(endpoint), [endpoint])
   const { data: anime, loading, error, reload } = useAsyncData(fetchDetail, {
@@ -21,6 +25,10 @@ const DetailPage = () => {
 
     const animeSlug = endpoint
     saveAnimeMeta({ slug: animeSlug, title: anime.title, poster: anime.poster, genres: anime.genres })
+    rememberEpisodeAnime(
+      animeSlug,
+      (anime.episode_lists ?? []).map((episode) => episode.slug),
+    )
     if (anime.recommendations?.length) {
       recordRecommendations({ slug: animeSlug, title: anime.title, genres: anime.genres }, anime.recommendations)
     }
@@ -76,6 +84,13 @@ const DetailPage = () => {
             height={900}
             className="aspect-[3/4] w-full rounded-2xl object-cover shadow-soft"
           />
+
+          <WishlistButton
+            animeSlug={endpoint}
+            title={anime.title}
+            poster={anime.poster}
+            className="mt-3"
+          />
         </div>
 
         <div className="surface-panel p-5 sm:p-6">
@@ -127,7 +142,13 @@ const DetailPage = () => {
           <div className="mt-6">
             <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Episodes</h2>
             <div className="mt-2 max-h-[420px] space-y-2 overflow-y-auto pr-1">
-              {anime.episode_lists?.length ? (
+              {!capabilities.streaming ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {source.label} tidak menyediakan pemutaran episode dari aplikasi ini.
+                  Pilih platform lain lewat pemilih <span className="font-semibold">Sumber</span>{' '}
+                  di bagian atas untuk menonton.
+                </p>
+              ) : anime.episode_lists?.length ? (
                 anime.episode_lists.map((episode) => (
                   <Link
                     key={episode.slug ?? episode.episode}

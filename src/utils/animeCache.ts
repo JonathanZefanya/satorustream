@@ -1,5 +1,8 @@
 import type { AnimeItem } from '../types/anime'
+import { readJson, scopedKey, writeJson } from './storage'
 
+// Kunci dipisah per sumber: katalog Otakudesu tidak boleh muncul saat pengguna
+// sedang memakai Oploverz.
 const CACHE_KEY = 'anime-list-cache-v1'
 const CACHE_TTL_MS = 5 * 60 * 1000
 
@@ -9,32 +12,52 @@ type CachedPayload = {
 }
 
 export const loadCachedAnimeList = (): AnimeItem[] | null => {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) {
-      return null
-    }
+  const parsed = readJson<CachedPayload>(scopedKey(CACHE_KEY))
 
-    const parsed = JSON.parse(raw) as CachedPayload
-    if (!parsed?.items?.length) {
-      return null
-    }
-
-    if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
-      return null
-    }
-
-    return parsed.items
-  } catch {
+  if (!parsed?.items?.length) {
     return null
   }
+
+  if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
+    return null
+  }
+
+  return parsed.items
 }
 
 export const saveCachedAnimeList = (items: AnimeItem[]): void => {
-  try {
-    const payload = JSON.stringify({ items, savedAt: Date.now() })
-    localStorage.setItem(CACHE_KEY, payload)
-  } catch {
-    // Ignore cache write failures.
+  writeJson(scopedKey(CACHE_KEY), { items, savedAt: Date.now() })
+}
+
+/**
+ * Endpoint daftar A-Z hanya memberi judul dan slug, tanpa poster. Poster
+ * dikumpulkan terpisah dari halaman ongoing/completed lalu disimpan lebih lama
+ * karena pengambilannya mahal (banyak halaman).
+ */
+const POSTER_CACHE_KEY = 'anime-poster-index-v1'
+const POSTER_CACHE_TTL_MS = 60 * 60 * 1000
+
+export type PosterIndex = Record<string, string>
+
+type CachedPosterPayload = {
+  posters: PosterIndex
+  savedAt: number
+}
+
+export const loadCachedPosterIndex = (): PosterIndex | null => {
+  const parsed = readJson<CachedPosterPayload>(scopedKey(POSTER_CACHE_KEY))
+
+  if (!parsed?.posters || Object.keys(parsed.posters).length === 0) {
+    return null
   }
+
+  if (Date.now() - parsed.savedAt > POSTER_CACHE_TTL_MS) {
+    return null
+  }
+
+  return parsed.posters
+}
+
+export const saveCachedPosterIndex = (posters: PosterIndex): void => {
+  writeJson(scopedKey(POSTER_CACHE_KEY), { posters, savedAt: Date.now() })
 }

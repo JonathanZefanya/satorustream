@@ -1,8 +1,12 @@
 import {
+  Bookmark,
   CalendarClock,
   Clapperboard,
+  History,
   House,
   Library,
+  LogIn,
+  LogOut,
   Moon,
   Search,
   Sun,
@@ -11,51 +15,40 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/authContext'
+import { useSource } from '../contexts/sourceContext'
 import { loadCachedAnimeList } from '../utils/animeCache'
+import type { SourceCapabilities } from '../services/sources'
 
 interface NavbarProps {
   theme: 'light' | 'dark'
   onToggleTheme: () => void
 }
 
-const menuItems = [
-  {
-    label: 'Home',
-    to: '/',
-    icon: House,
-    end: true,
-  },
-  {
-    label: 'Anime List',
-    to: '/anime-list',
-    icon: Library,
-    end: false,
-  },
-  {
-    label: 'Jadwal Rilis',
-    to: '/jadwal-rilis',
-    icon: CalendarClock,
-    end: false,
-  },
-  {
-    label: 'OnGoing',
-    to: '/ongoing',
-    icon: Clapperboard,
-    end: false,
-  },
-  {
-    label: 'Genre List',
-    to: '/genres',
-    icon: Tags,
-    end: false,
-  },
-]
+// Menu disaring terhadap kemampuan sumber aktif — Oploverz misalnya tidak
+// punya katalog A-Z, jadi menunya tidak ditampilkan sama sekali.
+const buildMenuItems = (capabilities: SourceCapabilities) =>
+  [
+    { label: 'Home', to: '/', icon: House, end: true, enabled: true },
+    { label: 'Anime List', to: '/anime-list', icon: Library, end: false, enabled: capabilities.animeList },
+    { label: 'Jadwal Rilis', to: '/jadwal-rilis', icon: CalendarClock, end: false, enabled: capabilities.schedule },
+    { label: 'OnGoing', to: '/ongoing', icon: Clapperboard, end: false, enabled: capabilities.ongoing },
+    { label: 'Genre List', to: '/genres', icon: Tags, end: false, enabled: capabilities.genres },
+    { label: 'Wishlist', to: '/wishlist', icon: Bookmark, end: false, enabled: true },
+    { label: 'Riwayat', to: '/history', icon: History, end: false, enabled: true },
+  ].filter((item) => item.enabled)
 
 const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user, enabled: authEnabled, signOut } = useAuth()
+  const { sourceId, options, setSourceId, capabilities } = useSource()
+  const menuItems = useMemo(() => buildMenuItems(capabilities), [capabilities])
   const [query, setQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
+
+  const accountName =
+    (user?.user_metadata?.display_name as string | undefined) ?? user?.email?.split('@')[0]
 
   const currentQuery =
     location.pathname === '/search'
@@ -104,9 +97,32 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             </span>
             <div>
               <p className="text-lg font-extrabold tracking-tight">SatoruStream</p>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Your nightly anime orbit</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Your nightly anime orbit
+              </p>
             </div>
           </Link>
+
+          {/* Pemilih platform menggantikan badge sumber di posisi yang sama.
+              Tersedia untuk tamu maupun pengguna yang sudah masuk; pilihannya
+              disimpan per perangkat, dengan VITE_API_SOURCE sebagai nilai awal. */}
+          <label className="flex items-center gap-2 sm:order-3">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Sumber
+            </span>
+            <select
+              value={sourceId}
+              onChange={(event) => setSourceId(event.target.value)}
+              title="Ganti platform sumber anime"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              {options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <form
@@ -188,6 +204,29 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             >
               {isLightMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </button>
+
+            {/* Tombol akun hanya muncul kalau Supabase dikonfigurasi. Tanpa itu
+                wishlist dan riwayat tetap jalan secara lokal. */}
+            {authEnabled &&
+              (user ? (
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  title={`Keluar dari ${accountName ?? 'akun'}`}
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden max-w-[7rem] truncate sm:inline">{accountName}</span>
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Masuk</span>
+                </Link>
+              ))}
           </div>
         </div>
 

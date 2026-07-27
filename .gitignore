@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables — hanya .env.example yang ikut ter-commit
+.env
+.env.development
+.env.production
+.env.local
+.env.*.local

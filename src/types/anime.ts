@@ -18,6 +18,16 @@ export interface PagedItems<T> {
   pagination: Pagination | null
 }
 
+export interface ScheduleDay {
+  day: string
+  items: AnimeItem[]
+}
+
+export interface AnimeCollection {
+  initial: string
+  items: AnimeItem[]
+}
+
 export interface Episode {
   episode?: string
   slug?: string
@@ -29,6 +39,7 @@ export interface AnimeItem {
   slug?: string
   poster?: string
   status?: string
+  type?: string
   rating?: string
   current_episode?: string
   episode_count?: string
@@ -72,6 +83,11 @@ export interface EpisodeNavigation {
   otakudesu_url?: string
 }
 
+export interface StreamServer {
+  title: string
+  serverId: string
+}
+
 export interface EpisodeDetail {
   episode: string
   anime: {
@@ -83,6 +99,7 @@ export interface EpisodeDetail {
   has_previous_episode: boolean
   previous_episode: EpisodeNavigation | null
   iframe_url?: string
+  servers?: StreamServer[]
   download_urls?: {
     mp4: {
       resolution?: string

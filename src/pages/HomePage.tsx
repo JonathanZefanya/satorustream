@@ -3,8 +3,10 @@ import AnimeCard from '../components/AnimeCard'
 import ContinueWatchingCard from '../components/ContinueWatchingCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
-import { getAnimeByGenre, getComplete, getDetail, getOngoing } from '../services/api'
+import { getAnimeByGenre, getDetail, getHome } from '../services/api'
 import type { AnimeDetail, AnimeItem, Genre } from '../types/anime'
+import { useAuth } from '../contexts/authContext'
+import { getLocalHistoryForActiveSource } from '../services/userLibrary'
 import {
   getAnimeMeta,
   getRecommendationShelf,
@@ -21,8 +23,8 @@ type HomeRecommendationShelf = {
 }
 
 type HomePayload = {
-  ongoing: Awaited<ReturnType<typeof getOngoing>>
-  complete: Awaited<ReturnType<typeof getComplete>>
+  ongoing: AnimeItem[]
+  complete: AnimeItem[]
   recommendations: HomeRecommendationShelf | null
 }
 
@@ -181,14 +183,23 @@ const buildRecommendations = async (
 }
 
 const HomePage = () => {
+  const { user } = useAuth()
+
   const fetchHomeData = useCallback(async (): Promise<HomePayload> => {
-    const [ongoing, complete] = await Promise.all([getOngoing(), getComplete()])
+    // superanime menyajikan ongoing + completed dalam satu endpoint home.
+    const { ongoing, complete } = await getHome()
     const recommendations = await buildRecommendations([...ongoing, ...complete], getRecommendationShelf())
     return { ongoing, complete, recommendations }
   }, [])
 
   const { data, loading, error, reload } = useAsyncData(fetchHomeData)
-  const continueWatching = useMemo(() => getWatchHistory().slice(0, 6), [])
+
+  // Riwayat terikat akun, jadi "Lanjutkan tontonan" hanya untuk yang sudah
+  // masuk — dan hanya entri dari sumber yang sedang aktif.
+  const continueWatching = useMemo(
+    () => (user ? getLocalHistoryForActiveSource().slice(0, 6) : []),
+    [user],
+  )
   const recommendedItems = data?.recommendations?.items ?? []
 
   return (
@@ -266,20 +277,23 @@ const HomePage = () => {
         )}
       </section>
 
-      <section className="mt-10">
-        <h2 className="section-title">Completed Anime</h2>
-        {loading ? (
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            <CardSkeleton count={12} />
-          </div>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {(data?.complete ?? []).map((anime) => (
-              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Tidak semua sumber menyediakan daftar selesai — sembunyikan kalau kosong. */}
+      {(loading || (data?.complete.length ?? 0) > 0) && (
+        <section className="mt-10">
+          <h2 className="section-title">Completed Anime</h2>
+          {loading ? (
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              <CardSkeleton count={12} />
+            </div>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {(data?.complete ?? []).map((anime) => (
+                <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

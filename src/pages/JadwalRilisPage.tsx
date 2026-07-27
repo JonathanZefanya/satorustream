@@ -2,8 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
-import { getOngoingSchedule } from '../services/api'
-import type { AnimeItem } from '../types/anime'
+import { getSchedule } from '../services/api'
 
 const DAY_ORDER = [
   'senin',
@@ -41,30 +40,26 @@ const normalizeDayLabel = (day?: string): string | null => {
 }
 
 const JadwalRilisPage = () => {
-  const fetchSchedule = useCallback(() => getOngoingSchedule(), [])
+  const fetchSchedule = useCallback(() => getSchedule(), [])
   const { data, loading, error, reload } = useAsyncData(fetchSchedule)
 
   const groupedSchedule = useMemo(() => {
-    const source = data ?? []
-    const map = new Map<string, AnimeItem[]>()
+    return (data ?? [])
+      .flatMap((group) => {
+        const label = normalizeDayLabel(group.day)
 
-    source.forEach((anime) => {
-      const label = normalizeDayLabel(anime.release_day)
-      if (!label) {
-        return
-      }
+        if (!label) {
+          return []
+        }
 
-      const current = map.get(label) ?? []
-      current.push(anime)
-      map.set(label, current)
-    })
-
-    return Array.from(map.entries())
-      .sort((a, b) => getDayRank(a[0]) - getDayRank(b[0]))
-      .map(([day, anime]) => ({
-        day,
-        anime: anime.sort((x, y) => (x.title ?? '').localeCompare(y.title ?? '')),
-      }))
+        return [
+          {
+            day: label,
+            anime: [...group.items].sort((x, y) => (x.title ?? '').localeCompare(y.title ?? '')),
+          },
+        ]
+      })
+      .sort((a, b) => getDayRank(a.day) - getDayRank(b.day))
   }, [data])
 
   return (

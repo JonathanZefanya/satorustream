@@ -1,265 +1,43 @@
-import axios from 'axios'
-import type {
-  AnimeDetail,
-  AnimeItem,
-  EpisodeDetail,
-  Genre,
-  PagedItems,
-  Pagination,
-} from '../types/anime'
+/**
+ * Fasad untuk sumber data aktif.
+ *
+ * Setiap sumber (otakudesu, oploverz, nimegami, kuramanime) punya adapter
+ * sendiri di `services/sources/` yang memetakan respons superanime ke tipe
+ * domain di `types/anime.ts`. Halaman cukup memanggil fungsi di sini dan tidak
+ * perlu tahu sumber mana yang sedang dipakai.
+ *
+ * Adapter di-resolve pada saat pemanggilan, bukan saat modul dimuat, supaya
+ * pergantian sumber dari UI langsung berlaku. Untuk nilai yang perlu memicu
+ * render ulang (mis. daftar menu), pakai `useSource()` alih-alih fungsi di sini.
+ */
+import { getActiveSource } from './sources'
+import { http } from './sources/shared'
+import type { StreamServer } from '../types/anime'
 
-const API_PREFIX = '/v1'
+export {
+  getActiveSource,
+  getActiveSourceId,
+  getCapabilities,
+  setActiveSourceId,
+  SOURCES,
+  SOURCE_IDS,
+  UnsupportedFeatureError,
+} from './sources'
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    Accept: 'application/json',
-  },
-})
+export const getHome = () => getActiveSource().getHome()
+export const getOngoingPage = (page = 1) => getActiveSource().getOngoingPage(page)
+export const getCompletePage = (page = 1) => getActiveSource().getCompletePage(page)
+export const getSchedule = () => getActiveSource().getSchedule()
+export const getAnimeCollections = () => getActiveSource().getAnimeCollections()
+export const getGenres = () => getActiveSource().getGenres()
+export const getAnimeByGenre = (genreSlug: string, page = 1) =>
+  getActiveSource().getAnimeByGenre(genreSlug, page)
+export const searchAnime = (query: string) => getActiveSource().searchAnime(query)
+export const getDetail = (endpoint: string) => getActiveSource().getDetail(endpoint)
+export const getEpisode = (endpoint: string) => getActiveSource().getEpisode(endpoint)
+export const getStreamServer = (server: StreamServer) => getActiveSource().getStreamServer(server)
 
-type ApiEnvelope<T> = {
-  status: string
-  data?: T
-  message?: string
-  pagination?: Pagination
-}
+export const getOngoing = async (page = 1) => (await getActiveSource().getOngoingPage(page)).items
+export const getComplete = async (page = 1) => (await getActiveSource().getCompletePage(page)).items
 
-type EpisodeApiPayload = Omit<EpisodeDetail, 'iframe_url'> & {
-  stream_url?: string
-}
-
-type AnimeByGenrePayload = {
-  anime: AnimeItem[]
-  pagination: Pagination | false
-}
-
-const parseErrorMessage = (error: unknown): string => {
-  if (!axios.isAxiosError(error)) {
-    return 'Unexpected error. Please try again.'
-  }
-
-  if (!error.response) {
-    return 'Cannot connect to local API at http://localhost:3000. Ensure your scraper server is running.'
-  }
-
-  const serverMessage =
-    typeof error.response.data?.message === 'string'
-      ? error.response.data.message
-      : null
-
-  if (serverMessage) {
-    return serverMessage
-  }
-
-  return `Request failed with status ${error.response.status}.`
-}
-
-const encodeSegment = (value: string, label: string): string => {
-  const cleaned = value.trim()
-
-  if (!cleaned) {
-    throw new Error(`${label} is required.`)
-  }
-
-  return encodeURIComponent(cleaned)
-}
-
-const getPayload = async <T>(url: string): Promise<T> => {
-  try {
-    const response = await api.get<ApiEnvelope<T>>(url)
-
-    if (response.data.data === undefined) {
-      throw new Error(response.data.message ?? 'No data returned from API.')
-    }
-
-    return response.data.data
-  } catch (error) {
-    if (error instanceof Error && !axios.isAxiosError(error)) {
-      throw error
-    }
-
-    throw new Error(parseErrorMessage(error), { cause: error })
-  }
-}
-
-const getEnvelope = async <T>(url: string): Promise<ApiEnvelope<T>> => {
-  try {
-    const response = await api.get<ApiEnvelope<T>>(url)
-    return response.data
-  } catch (error) {
-    throw new Error(parseErrorMessage(error), { cause: error })
-  }
-}
-
-const withPage = (basePath: string, page: number): string => {
-  return page > 1 ? `${basePath}/${page}` : basePath
-}
-
-const getEndpointFromValue = (value?: string, section?: 'anime' | 'episode'): string | undefined => {
-  const cleaned = value?.trim()
-
-  if (!cleaned) {
-    return undefined
-  }
-
-  const normalized = cleaned.replace(/^https?:\/(?!\/)/i, (match) => `${match}/`)
-
-  try {
-    const url = new URL(normalized)
-    const parts = url.pathname.split('/').filter(Boolean)
-
-    if (section) {
-      const sectionIndex = parts.indexOf(section)
-      return sectionIndex >= 0 ? parts[sectionIndex + 1] : undefined
-    }
-
-    return parts.at(-1)
-  } catch {
-    if (cleaned.includes('/')) {
-      const parts = cleaned.split('/').filter(Boolean)
-      const sectionIndex = section ? parts.indexOf(section) : -1
-
-      if (section && sectionIndex >= 0) {
-        return parts[sectionIndex + 1]
-      }
-
-      return section ? undefined : parts.at(-1)
-    }
-
-    return section ? undefined : cleaned
-  }
-}
-
-const normalizeEpisodeDetail = (data: EpisodeApiPayload): EpisodeDetail => {
-  const animeSlug =
-    getEndpointFromValue(data.anime?.otakudesu_url, 'anime') ??
-    getEndpointFromValue(data.anime?.slug, 'anime') ??
-    (!data.anime?.slug?.includes('/') ? data.anime?.slug : undefined)
-
-  return {
-    ...data,
-    anime: {
-      ...data.anime,
-      slug: animeSlug,
-    },
-    next_episode: data.next_episode
-      ? {
-          ...data.next_episode,
-          slug:
-            getEndpointFromValue(data.next_episode.otakudesu_url, 'episode') ??
-            getEndpointFromValue(data.next_episode.slug, 'episode') ??
-            getEndpointFromValue(data.next_episode.slug),
-        }
-      : null,
-    previous_episode: data.previous_episode
-      ? {
-          ...data.previous_episode,
-          slug:
-            getEndpointFromValue(data.previous_episode.otakudesu_url, 'episode') ??
-            getEndpointFromValue(data.previous_episode.slug, 'episode') ??
-            getEndpointFromValue(data.previous_episode.slug),
-        }
-      : null,
-    iframe_url: data.stream_url ?? '',
-  }
-}
-
-export const getOngoingPage = async (page = 1): Promise<PagedItems<AnimeItem>> => {
-  const result = await getEnvelope<AnimeItem[]>(withPage(`${API_PREFIX}/ongoing-anime`, page))
-
-  if (result.data === undefined) {
-    throw new Error(result.message ?? 'No ongoing anime data returned from API.')
-  }
-
-  return {
-    items: result.data,
-    pagination: result.pagination ?? null,
-  }
-}
-
-export const getCompletePage = async (page = 1): Promise<PagedItems<AnimeItem>> => {
-  const result = await getEnvelope<AnimeItem[]>(withPage(`${API_PREFIX}/complete-anime`, page))
-
-  if (result.data === undefined) {
-    throw new Error(result.message ?? 'No completed anime data returned from API.')
-  }
-
-  return {
-    items: result.data,
-    pagination: result.pagination ?? null,
-  }
-}
-
-export const getOngoing = async (page = 1): Promise<AnimeItem[]> => {
-  const result = await getOngoingPage(page)
-  return result.items
-}
-
-export const getOngoingSchedule = async (): Promise<AnimeItem[]> => {
-  const firstPage = await getOngoingPage(1)
-  const lastPage = firstPage.pagination?.last_visible_page ?? 1
-
-  if (lastPage <= 1) {
-    return firstPage.items
-  }
-
-  const pages = Array.from({ length: lastPage - 1 }, (_, index) => index + 2)
-  const pageResults = await Promise.all(pages.map((page) => getOngoingPage(page)))
-  const allItems = [firstPage.items, ...pageResults.map((result) => result.items)].flat()
-
-  const seen = new Set<string>()
-  return allItems.filter((item) => {
-    const key = item.slug || item.title || ''
-
-    if (!key || seen.has(key)) {
-      return false
-    }
-
-    seen.add(key)
-    return true
-  })
-}
-
-export const getComplete = async (page = 1): Promise<AnimeItem[]> => {
-  const result = await getCompletePage(page)
-  return result.items
-}
-
-export const getDetail = async (endpoint: string): Promise<AnimeDetail> => {
-  const slug = encodeSegment(endpoint, 'Anime endpoint')
-  return getPayload<AnimeDetail>(`${API_PREFIX}/anime/${slug}`)
-}
-
-export const getEpisode = async (endpoint: string): Promise<EpisodeDetail> => {
-  const slug = encodeSegment(endpoint, 'Episode endpoint')
-  const data = await getPayload<EpisodeApiPayload>(`${API_PREFIX}/episode/${slug}`)
-  return normalizeEpisodeDetail(data)
-}
-
-export const searchAnime = async (query: string): Promise<AnimeItem[]> => {
-  const keyword = query.trim()
-
-  if (!keyword) {
-    return []
-  }
-
-  return getPayload<AnimeItem[]>(`${API_PREFIX}/search/${encodeURIComponent(keyword)}`)
-}
-
-export const getGenres = async (): Promise<Genre[]> => {
-  return getPayload<Genre[]>(`${API_PREFIX}/genres`)
-}
-
-export const getAnimeByGenre = async (genreSlug: string, page = 1): Promise<PagedItems<AnimeItem>> => {
-  const slug = encodeSegment(genreSlug, 'Genre slug')
-  const path = withPage(`${API_PREFIX}/genres/${slug}`, page)
-  const data = await getPayload<AnimeByGenrePayload>(path)
-
-  return {
-    items: data.anime,
-    pagination: data.pagination === false ? null : data.pagination,
-  }
-}
-
-export default api
+export default http

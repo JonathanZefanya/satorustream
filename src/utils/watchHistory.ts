@@ -1,10 +1,14 @@
 import type { AnimeItem } from '../types/anime'
+import { readJson, removeKey, scopedKey, writeJson } from './storage'
 
+// Riwayat menyimpan sourceId di tiap entri sehingga aman dalam satu daftar.
+// Cache lain diindeks per slug, jadi harus dipisah per sumber.
 const WATCH_HISTORY_KEY = 'satorustream-watch-history-v1'
 const ANIME_META_KEY = 'satorustream-anime-meta-v1'
 const RECOMMENDATION_KEY = 'satorustream-recommendations-v1'
 
-const HISTORY_LIMIT = 12
+// Cermin lokal dari riwayat akun; beranda hanya menampilkan beberapa teratas.
+const HISTORY_LIMIT = 60
 const RECOMMENDATION_LIMIT = 24
 
 type AnimeMeta = {
@@ -16,6 +20,8 @@ type AnimeMeta = {
 }
 
 export type WatchHistoryEntry = {
+  /** Sumber asal entri; slug tidak bisa dibandingkan lintas sumber. */
+  sourceId?: string
   animeSlug?: string
   episodeSlug?: string
   episodeLabel?: string
@@ -32,33 +38,12 @@ export type RecommendationShelf = {
   items: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>[]
 }
 
-const readJson = <T>(key: string): T | null => {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) {
-      return null
-    }
-
-    return JSON.parse(raw) as T
-  } catch {
-    return null
-  }
-}
-
-const writeJson = (key: string, value: unknown) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
 export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>) => {
   if (!anime.slug) {
     return
   }
 
-  const metaMap = readJson<Record<string, AnimeMeta>>(ANIME_META_KEY) ?? {}
+  const metaMap = readJson<Record<string, AnimeMeta>>(scopedKey(ANIME_META_KEY)) ?? {}
   metaMap[anime.slug] = {
     slug: anime.slug,
     title: anime.title,
@@ -67,7 +52,7 @@ export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster'
     updatedAt: Date.now(),
   }
 
-  writeJson(ANIME_META_KEY, metaMap)
+  writeJson(scopedKey(ANIME_META_KEY), metaMap)
 }
 
 export const getAnimeMeta = (slug?: string): AnimeMeta | null => {
@@ -75,7 +60,7 @@ export const getAnimeMeta = (slug?: string): AnimeMeta | null => {
     return null
   }
 
-  const metaMap = readJson<Record<string, AnimeMeta>>(ANIME_META_KEY)
+  const metaMap = readJson<Record<string, AnimeMeta>>(scopedKey(ANIME_META_KEY))
   return metaMap?.[slug] ?? null
 }
 
@@ -85,7 +70,15 @@ export const recordWatchHistory = (entry: Omit<WatchHistoryEntry, 'watchedAt'>) 
   const animeSlug = entry.animeSlug
   const episodeSlug = entry.episodeSlug
 
+  // Satu anime cukup diwakili episode terakhirnya. Perbandingan hanya berlaku
+  // dalam sumber yang sama karena slug bisa bertabrakan antar sumber.
   const filtered = current.filter((item) => {
+    const sameSource = (item.sourceId ?? entry.sourceId) === entry.sourceId
+
+    if (!sameSource) {
+      return true
+    }
+
     if (animeSlug && item.animeSlug) {
       return item.animeSlug !== animeSlug
     }
@@ -109,6 +102,38 @@ export const recordWatchHistory = (entry: Omit<WatchHistoryEntry, 'watchedAt'>) 
 export const getWatchHistory = (): WatchHistoryEntry[] => {
   const current = readJson<WatchHistoryEntry[]>(WATCH_HISTORY_KEY) ?? []
   return [...current].sort((a, b) => b.watchedAt - a.watchedAt)
+}
+
+/**
+ * Ganti isi riwayat lokal dengan daftar yang diberikan, setelah dedup per
+ * (sumber, episode). Dipakai saat menyelaraskan dengan riwayat dari akun.
+ */
+export const mergeWatchHistory = (entries: WatchHistoryEntry[]) => {
+  const seen = new Set<string>()
+  const deduped: WatchHistoryEntry[] = []
+
+  ;[...entries]
+    .sort((a, b) => b.watchedAt - a.watchedAt)
+    .forEach((entry) => {
+      const key = `${entry.sourceId ?? ''}::${entry.episodeSlug ?? entry.animeSlug ?? ''}`
+
+      if (!key.trim() || seen.has(key)) {
+        return
+      }
+
+      seen.add(key)
+      deduped.push(entry)
+    })
+
+  writeJson(WATCH_HISTORY_KEY, deduped.slice(0, HISTORY_LIMIT))
+}
+
+/**
+ * Riwayat terikat akun, jadi cermin lokalnya dibuang saat keluar agar tidak
+ * terbawa ke pengguna berikutnya di perangkat yang sama.
+ */
+export const clearWatchHistory = () => {
+  removeKey(WATCH_HISTORY_KEY)
 }
 
 export const recordRecommendations = (
@@ -149,9 +174,9 @@ export const recordRecommendations = (
     items: deduped.slice(0, RECOMMENDATION_LIMIT),
   }
 
-  writeJson(RECOMMENDATION_KEY, shelf)
+  writeJson(scopedKey(RECOMMENDATION_KEY), shelf)
 }
 
 export const getRecommendationShelf = (): RecommendationShelf | null => {
-  return readJson<RecommendationShelf>(RECOMMENDATION_KEY)
+  return readJson<RecommendationShelf>(scopedKey(RECOMMENDATION_KEY))
 }

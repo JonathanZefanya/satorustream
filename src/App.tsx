@@ -3,14 +3,20 @@ import { useEffect, useState } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
+import { AuthProvider } from './contexts/AuthProvider'
+import { SourceProvider } from './contexts/SourceProvider'
+import { useSource } from './contexts/sourceContext'
 import AnimeListPage from './pages/AnimeListPage'
 import DetailPage from './pages/DetailPage'
 import GenreListPage from './pages/GenreListPage'
+import HistoryPage from './pages/HistoryPage'
 import HomePage from './pages/HomePage'
 import JadwalRilisPage from './pages/JadwalRilisPage'
+import LoginPage from './pages/LoginPage'
 import OngoingPage from './pages/OngoingPage'
 import SearchPage from './pages/SearchPage'
 import WatchPage from './pages/WatchPage'
+import WishlistPage from './pages/WishlistPage'
 
 type Theme = 'light' | 'dark'
 
@@ -43,6 +49,7 @@ interface AppLayoutProps {
 
 const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
   const location = useLocation()
+  const { sourceId, capabilities } = useSource()
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -58,15 +65,42 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
       <div className="pointer-events-none fixed inset-x-0 top-[-180px] h-[300px] bg-gradient-to-b from-rose-100/60 to-transparent dark:from-rose-900/25" />
       <Navbar theme={theme} onToggleTheme={onToggleTheme} />
       <main>
-        <Routes>
+        {/* `key` memaksa halaman dipasang ulang saat sumber berganti, sehingga
+            seluruh data lama dibuang dan diambil ulang dari sumber yang baru. */}
+        <Routes key={sourceId}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/anime-list" element={<AnimeListPage />} />
-          <Route path="/jadwal-rilis" element={<JadwalRilisPage />} />
-          <Route path="/ongoing" element={<OngoingPage />} />
-          <Route path="/genres" element={<GenreListPage />} />
+          {/* Rute yang tidak didukung sumber aktif dialihkan ke beranda supaya
+              tautan lama atau bookmark tidak berujung di halaman rusak. */}
+          <Route
+            path="/anime-list"
+            element={capabilities.animeList ? <AnimeListPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/jadwal-rilis"
+            element={capabilities.schedule ? <JadwalRilisPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/ongoing"
+            element={capabilities.ongoing ? <OngoingPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/genres"
+            element={capabilities.genres ? <GenreListPage /> : <Navigate to="/" replace />}
+          />
           <Route path="/anime/:endpoint" element={<DetailPage />} />
-          <Route path="/watch/:endpoint" element={<WatchPage />} />
-          <Route path="/search" element={<SearchPage />} />
+          <Route
+            path="/watch/:endpoint"
+            element={capabilities.streaming ? <WatchPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/search"
+            element={capabilities.search ? <SearchPage /> : <Navigate to="/" replace />}
+          />
+          {/* Wishlist dan riwayat terikat akun; halamannya sendiri yang
+              menampilkan ajakan masuk bila belum login. */}
+          <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/home" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -92,9 +126,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <ErrorBoundary>
-        <AppLayout theme={theme} onToggleTheme={handleToggleTheme} />
-      </ErrorBoundary>
+      <SourceProvider>
+        <AuthProvider>
+          <ErrorBoundary>
+            <AppLayout theme={theme} onToggleTheme={handleToggleTheme} />
+          </ErrorBoundary>
+        </AuthProvider>
+      </SourceProvider>
     </BrowserRouter>
   )
 }
