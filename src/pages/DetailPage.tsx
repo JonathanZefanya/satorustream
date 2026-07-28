@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { DetailSkeleton } from '../components/Skeletons'
 import WishlistButton from '../components/WishlistButton'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { useSource } from '../contexts/sourceContext'
 import { getDetail } from '../services/api'
 import { rememberEpisodeAnime } from '../utils/episodeMap'
@@ -33,6 +34,65 @@ const DetailPage = () => {
       recordRecommendations({ slug: animeSlug, title: anime.title, genres: anime.genres }, anime.recommendations)
     }
   }, [anime, endpoint])
+
+  const genreNames = (anime?.genres ?? [])
+    .map((genre) => genre.name)
+    .filter((name): name is string => Boolean(name))
+  const animeTitle = anime?.title?.trim() || 'Anime'
+  const score = Number.parseFloat(anime?.rating ?? '')
+  const canonicalPath = `/anime/${endpoint}`
+
+  useSeo({
+    title: anime ? `Nonton ${animeTitle} Sub Indo` : 'Detail Anime',
+    description: anime
+      ? anime.synopsis?.trim() ||
+        `Nonton dan download ${animeTitle} subtitle Indonesia. Status ${anime.status || 'tidak diketahui'}${
+          genreNames.length ? `, genre ${genreNames.slice(0, 3).join(', ')}` : ''
+        }. Streaming gratis di SatoruStream.`
+      : 'Detail anime di SatoruStream.',
+    image: anime?.poster,
+    canonicalPath,
+    type: 'video.tv_show',
+    keywords: anime
+      ? [animeTitle, `nonton ${animeTitle}`, `${animeTitle} sub indo`, ...genreNames]
+      : undefined,
+    jsonLd: anime
+      ? [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'TVSeries',
+            name: animeTitle,
+            alternateName: anime.japanese_title || undefined,
+            url: `${SITE_URL}${canonicalPath}`,
+            image: anime.poster || undefined,
+            description: anime.synopsis || undefined,
+            genre: genreNames.length ? genreNames : undefined,
+            inLanguage: 'ja',
+            subtitleLanguage: 'id',
+            numberOfEpisodes: anime.episode_lists?.length || undefined,
+            productionCompany: anime.studio ? { '@type': 'Organization', name: anime.studio } : undefined,
+            datePublished: anime.release_date || undefined,
+            aggregateRating: Number.isFinite(score)
+              ? {
+                  '@type': 'AggregateRating',
+                  ratingValue: score,
+                  bestRating: 10,
+                  worstRating: 1,
+                  ratingCount: 1,
+                }
+              : undefined,
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE_URL}/` },
+              { '@type': 'ListItem', position: 2, name: animeTitle, item: `${SITE_URL}${canonicalPath}` },
+            ],
+          },
+        ]
+      : undefined,
+  })
 
   if (loading) {
     return (

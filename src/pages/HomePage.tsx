@@ -3,6 +3,7 @@ import AnimeCard from '../components/AnimeCard'
 import ContinueWatchingCard from '../components/ContinueWatchingCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { getAnimeByGenre, getDetail, getHome } from '../services/api'
 import type { AnimeDetail, AnimeItem, Genre } from '../types/anime'
 import { useAuth } from '../contexts/authContext'
@@ -184,6 +185,22 @@ const buildRecommendations = async (
 
 const HomePage = () => {
   const { user } = useAuth()
+
+  useSeo({
+    title: 'Nonton Anime Sub Indo Gratis — Streaming & Update Terbaru',
+    description:
+      'Nonton anime subtitle Indonesia gratis di SatoruStream. Anime ongoing, episode terbaru, jadwal rilis harian, dan katalog lengkap dengan kualitas 360p hingga 720p.',
+    canonicalPath: '/',
+    keywords: ['nonton anime', 'anime sub indo', 'streaming anime', 'anime ongoing', 'anime terbaru'],
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'SatoruStream',
+      description: 'Katalog streaming anime subtitle Indonesia.',
+      url: `${SITE_URL}/`,
+      inLanguage: 'id-ID',
+    },
+  })
 
   const fetchHomeData = useCallback(async (): Promise<HomePayload> => {
     // superanime menyajikan ongoing + completed dalam satu endpoint home.

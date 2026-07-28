@@ -3,11 +3,23 @@ import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { searchAnime } from '../services/api'
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')?.trim() ?? ''
+
+  useSeo({
+    title: query ? `Hasil pencarian "${query}"` : 'Cari Anime Sub Indo',
+    description: query
+      ? `Hasil pencarian anime "${query}" subtitle Indonesia di SatoruStream.`
+      : 'Cari judul anime subtitle Indonesia dan langsung tonton episodenya di SatoruStream.',
+    // Halaman hasil pencarian internal sengaja tidak diindeks: isinya berubah
+    // terus dan Google menganggapnya konten berkualitas rendah.
+    canonicalPath: '/search',
+    noIndex: Boolean(query),
+  })
   const [statusFilter, setStatusFilter] = useState('all')
   const [seasonFilter, setSeasonFilter] = useState('all')
 

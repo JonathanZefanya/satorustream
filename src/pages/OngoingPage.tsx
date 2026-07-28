@@ -2,11 +2,20 @@ import { useCallback } from 'react'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { getOngoing } from '../services/api'
 
 const OngoingPage = () => {
   const fetchOngoing = useCallback(() => getOngoing(), [])
   const { data, loading, error, reload } = useAsyncData(fetchOngoing)
+
+  useSeo({
+    title: 'Anime Ongoing Sub Indo — Sedang Tayang Musim Ini',
+    description:
+      'Daftar anime ongoing subtitle Indonesia yang sedang tayang musim ini, lengkap dengan episode terbaru dan update mingguan.',
+    canonicalPath: '/ongoing',
+    keywords: ['anime ongoing', 'anime sedang tayang', 'anime musim ini', 'anime ongoing sub indo'],
+  })
 
   return (
     <div className="container-app py-6 sm:py-8">

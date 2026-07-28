@@ -6,11 +6,19 @@ import { CardSkeleton } from '../components/Skeletons'
 import { useAuth } from '../contexts/authContext'
 import { useSource } from '../contexts/sourceContext'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { getWatchlist, removeFromWatchlist, type WatchlistEntry } from '../services/userLibrary'
 
 const WishlistPage = () => {
   const { user, loading: authLoading } = useAuth()
   const { sourceId } = useSource()
+
+  useSeo({
+    title: 'Wishlist',
+    description: 'Daftar anime yang kamu simpan untuk ditonton nanti.',
+    canonicalPath: '/wishlist',
+    noIndex: true,
+  })
   const [removing, setRemoving] = useState<string | null>(null)
 
   const fetchWatchlist = useCallback(() => getWatchlist(user?.id), [user?.id])

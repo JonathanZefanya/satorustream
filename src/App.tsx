@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
+import PwaPrompt from './components/PwaPrompt'
+import { useSeo } from './hooks/useSeo'
 import { AuthProvider } from './contexts/AuthProvider'
 import { SourceProvider } from './contexts/SourceProvider'
 import { useSource } from './contexts/sourceContext'
@@ -32,6 +34,12 @@ const getInitialTheme = (): Theme => {
 }
 
 const NotFoundPage = () => {
+  useSeo({
+    title: 'Halaman tidak ditemukan',
+    description: 'Alamat yang kamu buka tidak ada di SatoruStream.',
+    noIndex: true,
+  })
+
   return (
     <div className="container-app py-10">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-900">
@@ -106,6 +114,7 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
         </Routes>
       </main>
       <Footer />
+      <PwaPrompt />
     </div>
   )
 }

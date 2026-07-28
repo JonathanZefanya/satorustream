@@ -1,13 +1,117 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Satoru Stream</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>SatoruStream — Nonton Anime Sub Indo Gratis, Streaming & Update Terbaru</title>
+    <meta
+      name="description"
+      content="SatoruStream adalah situs streaming anime subtitle Indonesia. Nonton anime ongoing, jadwal rilis harian, katalog A-Z, dan episode terbaru gratis dengan kualitas 360p hingga 720p."
+    />
+    <meta
+      name="keywords"
+      content="nonton anime, anime sub indo, streaming anime, anime ongoing, jadwal rilis anime, download anime, anime terbaru, satorustream"
+    />
+    <meta name="author" content="SatoruStream" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+
+    <!-- ====================== Open Graph (Facebook, WhatsApp, Discord) ====================== -->
+    <meta property="og:site_name" content="SatoruStream" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:title" content="SatoruStream — Nonton Anime Sub Indo Gratis" />
+    <meta
+      property="og:description"
+      content="Streaming anime subtitle Indonesia: ongoing, jadwal rilis harian, katalog A-Z, dan episode terbaru. Gratis, tanpa aplikasi tambahan."
+    />
+    <meta property="og:image" content="%VITE_SITE_URL%/favicon.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Logo SatoruStream" />
+
+    <!-- ====================== Twitter / X ====================== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SatoruStream — Nonton Anime Sub Indo Gratis" />
+    <meta
+      name="twitter:description"
+      content="Streaming anime subtitle Indonesia: ongoing, jadwal rilis harian, katalog A-Z, dan episode terbaru."
+    />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/favicon.png" />
+
+    <!-- ====================== Ikon & PWA ====================== -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="application-name" content="SatoruStream" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SatoruStream" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
+
+    <!-- ====================== Performa ====================== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_API_BASE_URL%" />
+
+    <!-- ====================== Data terstruktur ======================
+         Memberi tahu Google identitas situs dan cara memakai halaman pencarian,
+         sehingga berpeluang tampil sebagai sitelinks searchbox. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "%VITE_SITE_URL%/#website",
+            "url": "%VITE_SITE_URL%/",
+            "name": "SatoruStream",
+            "description": "Situs streaming anime subtitle Indonesia.",
+            "inLanguage": "id-ID",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "%VITE_SITE_URL%/search?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "%VITE_SITE_URL%/#organization",
+            "name": "SatoruStream",
+            "url": "%VITE_SITE_URL%/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "%VITE_SITE_URL%/favicon.png",
+              "width": 512,
+              "height": 512
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Konten cadangan untuk crawler tanpa JavaScript dan pengguna yang
+           mematikan JS. Dihapus React begitu aplikasi ter-mount. -->
+      <noscript>
+        <h1>SatoruStream — Nonton Anime Sub Indo</h1>
+        <p>
+          Situs ini membutuhkan JavaScript untuk menampilkan katalog dan pemutar video.
+          Aktifkan JavaScript di peramban kamu untuk melanjutkan.
+        </p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -3,13 +3,40 @@ import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { getAnimeByGenre, getGenres } from '../services/api'
+
+/** Mengubah slug genre ("slice-of-life") menjadi label judul ("Slice Of Life"). */
+const toGenreLabel = (slug: string): string => {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 
 const GenreListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedGenre = searchParams.get('genre') ?? ''
   const pageParam = Number(searchParams.get('page') ?? '1')
   const currentPage = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
+
+  const genreLabel = selectedGenre ? toGenreLabel(selectedGenre) : ''
+
+  useSeo({
+    title: genreLabel
+      ? `Anime Genre ${genreLabel} Sub Indo${currentPage > 1 ? ` — Halaman ${currentPage}` : ''}`
+      : 'Genre Anime — Jelajahi Berdasarkan Kategori',
+    description: genreLabel
+      ? `Kumpulan anime genre ${genreLabel} subtitle Indonesia. Telusuri judul terbaik bergenre ${genreLabel} dan tonton gratis di SatoruStream.`
+      : 'Jelajahi anime berdasarkan genre: action, romance, isekai, comedy, dan lainnya. Semua dengan subtitle Indonesia.',
+    canonicalPath: selectedGenre
+      ? `/genres?genre=${selectedGenre}${currentPage > 1 ? `&page=${currentPage}` : ''}`
+      : '/genres',
+    keywords: genreLabel
+      ? [`anime ${genreLabel}`, `anime genre ${genreLabel}`, `${genreLabel} sub indo`]
+      : ['genre anime', 'anime berdasarkan genre'],
+  })
 
   const {
     data: genres,

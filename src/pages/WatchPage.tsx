@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Clapperboard, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { useAuth } from '../contexts/authContext'
 import { getEpisode, getStreamServer } from '../services/api'
 import { recordHistory } from '../services/userLibrary'
@@ -170,6 +171,40 @@ const WatchPage = () => {
   }, [activeProviders, activeQuality, selectedProviderKey])
 
   const servers = data?.servers ?? []
+
+  // Judul anime tidak ikut di respons episode, jadi diambil dari meta yang
+  // sudah disimpan saat halaman detail dibuka.
+  const animeMeta = getAnimeMeta(animeSlug)
+  const episodeLabel = data?.episode?.trim() || 'Episode'
+  const canonicalPath = `/watch/${endpoint}`
+
+  useSeo({
+    title: data ? `Nonton ${episodeLabel} Sub Indo` : 'Nonton Anime',
+    description: data
+      ? `Streaming ${episodeLabel}${animeMeta?.title ? ` dari ${animeMeta.title}` : ''} subtitle Indonesia gratis di SatoruStream. Tersedia kualitas 360p, 480p, dan 720p.`
+      : 'Streaming episode anime subtitle Indonesia di SatoruStream.',
+    image: animeMeta?.poster,
+    canonicalPath,
+    type: 'video.episode',
+    jsonLd: data
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'TVEpisode',
+          name: episodeLabel,
+          url: `${SITE_URL}${canonicalPath}`,
+          image: animeMeta?.poster || undefined,
+          inLanguage: 'ja',
+          subtitleLanguage: 'id',
+          partOfSeries: animeMeta?.title
+            ? {
+                '@type': 'TVSeries',
+                name: animeMeta.title,
+                url: animeSlug ? `${SITE_URL}/anime/${animeSlug}` : undefined,
+              }
+            : undefined,
+        }
+      : undefined,
+  })
 
   const handlePickServer = async (server: StreamServer | null) => {
     setPlayerMode('server')

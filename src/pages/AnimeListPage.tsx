@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { getAnimeCollections, getCompletePage, getOngoingPage } from '../services/api'
 import type { AnimeItem, PagedItems } from '../types/anime'
 import {
@@ -101,6 +102,15 @@ const buildPosterIndex = async (): Promise<PosterIndex> => {
 
 const AnimeListPage = () => {
   const [selectedLetter, setSelectedLetter] = useState<string>('A')
+
+  useSeo({
+    title: 'Daftar Anime A-Z — Katalog Lengkap Sub Indo',
+    description:
+      'Katalog lengkap anime subtitle Indonesia yang diurutkan A sampai Z. Telusuri ribuan judul anime ongoing maupun tamat, lalu tonton langsung di SatoruStream.',
+    canonicalPath: '/anime-list',
+    keywords: ['daftar anime', 'anime a-z', 'katalog anime', 'list anime sub indo'],
+  })
+
   const cachedAnime = useMemo(() => loadCachedAnimeList(), [])
   const [posterIndex, setPosterIndex] = useState<PosterIndex>(() => loadCachedPosterIndex() ?? {})
 

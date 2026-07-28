@@ -2,11 +2,19 @@ import { LogIn, UserPlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/authContext'
+import { useSeo } from '../hooks/useSeo'
 
 type Mode = 'signin' | 'signup'
 
 const LoginPage = () => {
   const { user, loading, enabled, signIn, signUp } = useAuth()
+
+  useSeo({
+    title: 'Masuk atau Daftar',
+    description: 'Masuk ke akun SatoruStream untuk menyimpan wishlist dan riwayat tontonan lintas perangkat.',
+    canonicalPath: '/login',
+    noIndex: true,
+  })
   const navigate = useNavigate()
   const location = useLocation()
 

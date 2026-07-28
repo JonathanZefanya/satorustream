@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { getSchedule } from '../services/api'
 
 const DAY_ORDER = [
@@ -42,6 +43,14 @@ const normalizeDayLabel = (day?: string): string | null => {
 const JadwalRilisPage = () => {
   const fetchSchedule = useCallback(() => getSchedule(), [])
   const { data, loading, error, reload } = useAsyncData(fetchSchedule)
+
+  useSeo({
+    title: 'Jadwal Rilis Anime Terbaru — Update Harian',
+    description:
+      'Jadwal rilis anime per hari, dari Senin sampai Minggu. Cek kapan episode terbaru anime favoritmu tayang dan tonton langsung di SatoruStream.',
+    canonicalPath: '/jadwal-rilis',
+    keywords: ['jadwal rilis anime', 'jadwal anime', 'anime tayang hari ini', 'jadwal anime harian'],
+  })
 
   const groupedSchedule = useMemo(() => {
     return (data ?? [])

@@ -5,6 +5,7 @@ import SignInPrompt from '../components/SignInPrompt'
 import { useAuth } from '../contexts/authContext'
 import { useSource } from '../contexts/sourceContext'
 import { useAsyncData } from '../hooks/useAsyncData'
+import { useSeo } from '../hooks/useSeo'
 import { clearHistoryEntry, getHistory, type HistoryEntry } from '../services/userLibrary'
 
 const formatWatchedAt = (timestamp: number): string => {
@@ -24,6 +25,13 @@ const formatWatchedAt = (timestamp: number): string => {
 const HistoryPage = () => {
   const { user, loading: authLoading } = useAuth()
   const { sourceId, capabilities } = useSource()
+
+  useSeo({
+    title: 'Riwayat Tontonan',
+    description: 'Episode yang terakhir kamu tonton, siap dilanjutkan kapan saja.',
+    canonicalPath: '/history',
+    noIndex: true,
+  })
   const [removing, setRemoving] = useState<string | null>(null)
 
   const fetchHistory = useCallback(() => getHistory(user?.id), [user?.id])

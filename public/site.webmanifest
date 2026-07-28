@@ -1,0 +1,63 @@
+{
+  "id": "/",
+  "name": "SatoruStream — Nonton Anime Sub Indo",
+  "short_name": "SatoruStream",
+  "description": "Streaming anime subtitle Indonesia: ongoing, jadwal rilis harian, katalog A-Z, dan episode terbaru.",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "categories": ["entertainment", "video", "anime"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Anime Ongoing",
+      "short_name": "Ongoing",
+      "description": "Anime yang sedang tayang musim ini",
+      "url": "/ongoing"
+    },
+    {
+      "name": "Jadwal Rilis",
+      "short_name": "Jadwal",
+      "description": "Jadwal rilis episode per hari",
+      "url": "/jadwal-rilis"
+    },
+    {
+      "name": "Cari Anime",
+      "short_name": "Cari",
+      "description": "Cari judul anime",
+      "url": "/search"
+    },
+    {
+      "name": "Riwayat Tontonan",
+      "short_name": "Riwayat",
+      "description": "Lanjutkan episode yang terakhir ditonton",
+      "url": "/history"
+    }
+  ]
+}
