@@ -18,6 +18,7 @@ export {
   getActiveSource,
   getActiveSourceId,
   getCapabilities,
+  SELECTABLE_SOURCE_IDS,
   setActiveSourceId,
   SOURCES,
   SOURCE_IDS,

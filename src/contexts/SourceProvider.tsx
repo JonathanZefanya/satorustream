@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  DEV_ONLY_SOURCE_IDS,
   getActiveSource,
   getActiveSourceId,
+  SELECTABLE_SOURCE_IDS,
   setActiveSourceId,
   SOURCES,
-  SOURCE_IDS,
 } from '../services/sources'
 import { SourceContext, type SourceContextValue } from './sourceContext'
 
@@ -13,7 +14,15 @@ interface SourceProviderProps {
   children: ReactNode
 }
 
-const OPTIONS = SOURCE_IDS.map((id) => ({ id, label: SOURCES[id].label }))
+/**
+ * Sumber khusus dev sudah tersaring, jadi pemilih di produksi tidak memuatnya.
+ * Yang lolos hanya karena mode dev diberi penanda supaya jelas bahwa sumber itu
+ * tidak akan ikut tampil setelah di-deploy.
+ */
+const OPTIONS = SELECTABLE_SOURCE_IDS.map((id) => ({
+  id,
+  label: DEV_ONLY_SOURCE_IDS.includes(id) ? `${SOURCES[id].label} (dev)` : SOURCES[id].label,
+}))
 
 export const SourceProvider = ({ children }: SourceProviderProps) => {
   const navigate = useNavigate()
