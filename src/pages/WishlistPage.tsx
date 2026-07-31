@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ConfirmDialog from '../components/ConfirmDialog'
 import SignInPrompt from '../components/SignInPrompt'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAuth } from '../contexts/authContext'
@@ -19,16 +20,23 @@ const WishlistPage = () => {
     canonicalPath: '/wishlist',
     noIndex: true,
   })
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<WatchlistEntry | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [removalError, setRemovalError] = useState<string | null>(null)
 
   const fetchWatchlist = useCallback(() => getWatchlist(user?.id), [user?.id])
   const { data, loading, error, reload, setData } = useAsyncData(fetchWatchlist, {
     enabled: !authLoading && Boolean(user),
   })
 
-  const handleRemove = async (entry: WatchlistEntry) => {
-    const key = `${entry.sourceId}:${entry.animeSlug}`
-    setRemoving(key)
+  const handleConfirmRemove = async () => {
+    if (!pendingRemoval) {
+      return
+    }
+
+    const entry = pendingRemoval
+    setRemoving(true)
+    setRemovalError(null)
 
     try {
       await removeFromWatchlist(entry.animeSlug, user?.id, entry.sourceId)
@@ -37,8 +45,11 @@ const WishlistPage = () => {
           (item) => !(item.sourceId === entry.sourceId && item.animeSlug === entry.animeSlug),
         ),
       )
+      setPendingRemoval(null)
+    } catch (err) {
+      setRemovalError(err instanceof Error ? err.message : 'Gagal menghapus dari wishlist.')
     } finally {
-      setRemoving(null)
+      setRemoving(false)
     }
   }
 
@@ -102,12 +113,31 @@ const WishlistPage = () => {
             return (
               <article key={key} className="group">
                 <div className="relative overflow-hidden rounded-xl aspect-[3/4]">
-                  <img
-                    src={entry.poster || 'https://placehold.co/480x640?text=No+Image'}
-                    alt={entry.title || 'Anime poster'}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                  />
+                  {/* Poster ikut jadi tautan ke detail — target klik yang paling
+                      besar dan paling wajar dituju lebih dulu. */}
+                  {sameSource ? (
+                    <Link
+                      to={`/anime/${entry.animeSlug}`}
+                      aria-label={`Buka detail ${entry.title || 'anime'}`}
+                      className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                    >
+                      <img
+                        src={entry.poster || 'https://placehold.co/480x640?text=No+Image'}
+                        alt={entry.title || 'Anime poster'}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </Link>
+                  ) : (
+                    <img
+                      src={entry.poster || 'https://placehold.co/480x640?text=No+Image'}
+                      alt={entry.title || 'Anime poster'}
+                      loading="lazy"
+                      title={`Disimpan dari sumber ${entry.sourceId}. Ganti pemilih Sumber di atas untuk membukanya.`}
+                      className="h-full w-full object-cover opacity-70"
+                    />
+                  )}
+
                   {!sameSource && (
                     <span className="absolute left-2 top-2 rounded-md bg-slate-900/85 px-2 py-1 text-[11px] font-semibold text-white">
                       {entry.sourceId}
@@ -115,10 +145,12 @@ const WishlistPage = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => void handleRemove(entry)}
-                    disabled={removing === key}
-                    aria-label="Hapus dari wishlist"
-                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/80 text-white transition hover:bg-rose-600 disabled:opacity-60"
+                    onClick={() => {
+                      setRemovalError(null)
+                      setPendingRemoval(entry)
+                    }}
+                    aria-label={`Hapus ${entry.title || 'anime ini'} dari wishlist`}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/80 text-white transition hover:bg-rose-600"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -144,6 +176,36 @@ const WishlistPage = () => {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingRemoval)}
+        title="Hapus dari wishlist?"
+        description={
+          pendingRemoval ? (
+            <>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {pendingRemoval.title || 'Anime ini'}
+              </span>{' '}
+              akan dikeluarkan dari wishlist kamu. Kamu bisa menyimpannya lagi kapan saja dari
+              halaman detail.
+              {removalError ? (
+                <span className="mt-2 block text-rose-600 dark:text-rose-400">{removalError}</span>
+              ) : null}
+            </>
+          ) : null
+        }
+        confirmLabel={removing ? 'Menghapus...' : 'Hapus'}
+        busy={removing}
+        onConfirm={() => void handleConfirmRemove()}
+        onCancel={() => {
+          if (removing) {
+            return
+          }
+
+          setPendingRemoval(null)
+          setRemovalError(null)
+        }}
+      />
     </div>
   )
 }

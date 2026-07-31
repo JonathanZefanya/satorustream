@@ -131,6 +131,64 @@
 }
 
 @layer utilities {
+  /* Baris menu navbar bisa digeser tanpa scrollbar yang mengganggu. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tepi kiri-kanan memudar sebagai petunjuk bahwa isinya masih bisa digeser. */
+  .edge-fade-x {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 18px,
+      #000 calc(100% - 18px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 18px,
+      #000 calc(100% - 18px),
+      transparent 100%
+    );
+  }
+
+  @media (min-width: 1024px) {
+    .edge-fade-x {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+
+  /* Panel melayang (dropdown sumber) muncul dengan gerakan singkat, dan
+     langsung diam bila pengguna meminta animasi dikurangi. */
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .pop-in {
+    animation: pop-in 140ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pop-in {
+      animation: none;
+    }
+  }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;

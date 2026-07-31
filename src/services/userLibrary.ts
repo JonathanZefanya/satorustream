@@ -249,13 +249,24 @@ export const getHistory = async (userId?: string | null): Promise<HistoryEntry[]
   return entries
 }
 
-export const clearHistoryEntry = async (
-  episodeSlug: string,
+/**
+ * Hapus beberapa episode sekaligus dalam satu permintaan. Halaman riwayat
+ * menampilkan satu baris per anime, jadi tombol hapusnya membuang seluruh
+ * episode anime tersebut — bukan hanya yang terakhir ditonton.
+ */
+export const clearHistoryEntries = async (
+  episodeSlugs: string[],
   userId?: string | null,
   sourceId = currentSourceId(),
 ): Promise<void> => {
   if (!userId) {
     throw new AuthRequiredError('Mengubah riwayat')
+  }
+
+  const slugs = episodeSlugs.filter(Boolean)
+
+  if (slugs.length === 0) {
+    return
   }
 
   const client = requireSupabase()
@@ -264,18 +275,26 @@ export const clearHistoryEntry = async (
     .delete()
     .eq('user_id', userId)
     .eq('source_id', sourceId)
-    .eq('episode_slug', episodeSlug)
+    .in('episode_slug', slugs)
 
   if (error) {
     throw new Error(error.message)
   }
 
+  const removed = new Set(slugs)
   mergeWatchHistory(
     getWatchHistory().filter(
-      (item) => !(item.episodeSlug === episodeSlug && (item.sourceId ?? sourceId) === sourceId),
+      (item) =>
+        !(item.episodeSlug && removed.has(item.episodeSlug) && (item.sourceId ?? sourceId) === sourceId),
     ),
   )
 }
+
+export const clearHistoryEntry = (
+  episodeSlug: string,
+  userId?: string | null,
+  sourceId = currentSourceId(),
+): Promise<void> => clearHistoryEntries([episodeSlug], userId, sourceId)
 
 /** Riwayat akun yang dicerminkan lokal, disaring untuk sumber yang aktif. */
 export const getLocalHistoryForActiveSource = (): HistoryEntry[] => {

@@ -1,68 +1,21 @@
-import { ChevronLeft, ChevronRight, Clapperboard, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Clapperboard, ListVideo, Loader2, Play } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { useAuth } from '../contexts/authContext'
-import { getEpisode, getStreamServer } from '../services/api'
+import { getDetail, getEpisode, getStreamServer } from '../services/api'
 import { recordHistory } from '../services/userLibrary'
 import type { StreamServer } from '../types/anime'
+import { episodeNumberFrom, stripAnimeTitle } from '../utils/episodeLabel'
 import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
 import { getAnimeMeta } from '../utils/watchHistory'
 
-type QualityOption = '360p' | '480p' | '720p'
-
-type ProviderOption = {
-  key: string
-  provider: string
-  url: string
-}
-
-/** Sumber yang sedang diputar: server streaming, atau tautan unduhan. */
-type PlayerMode = 'server' | 'download'
-
 const DEFAULT_SERVER_KEY = 'default'
-
-const QUALITY_OPTIONS: QualityOption[] = ['360p', '480p', '720p']
-
-const normalizeResolution = (resolution?: string): string => {
-  return (resolution ?? '').toLowerCase().replace(/\s+/g, '')
-}
-
-const getQualityFromResolution = (resolution?: string): QualityOption | null => {
-  const normalized = normalizeResolution(resolution)
-
-  if (normalized.includes('360p')) {
-    return '360p'
-  }
-
-  if (normalized.includes('480p')) {
-    return '480p'
-  }
-
-  if (normalized.includes('720p')) {
-    return '720p'
-  }
-
-  return null
-}
-
-const isIframeBlockedProvider = (url?: string | null): boolean => {
-  if (!url) {
-    return false
-  }
-
-  const target = url.toLowerCase()
-  const blockedHints = ['odfiles', 'pixeldrain', 'pdrain', 'kfiles']
-  return blockedHints.some((hint) => target.includes(hint))
-}
 
 const WatchPage = () => {
   const { endpoint = '' } = useParams()
   const { user } = useAuth()
-  const [selectedQuality, setSelectedQuality] = useState<QualityOption>('360p')
-  const [selectedProviderKey, setSelectedProviderKey] = useState<Partial<Record<QualityOption, string>>>({})
-  const [playerMode, setPlayerMode] = useState<PlayerMode>('server')
   const [selectedServerKey, setSelectedServerKey] = useState<string>(DEFAULT_SERVER_KEY)
   const [serverUrls, setServerUrls] = useState<Record<string, string>>({})
   const [serverLoading, setServerLoading] = useState(false)
@@ -78,7 +31,6 @@ const WatchPage = () => {
   const [renderedEndpoint, setRenderedEndpoint] = useState(endpoint)
   if (renderedEndpoint !== endpoint) {
     setRenderedEndpoint(endpoint)
-    setPlayerMode('server')
     setSelectedServerKey(DEFAULT_SERVER_KEY)
     setServerUrls({})
     setServerError(null)
@@ -112,63 +64,34 @@ const WatchPage = () => {
     )
   }, [animeSlug, data, endpoint, user?.id])
 
-  const providersByQuality = useMemo(() => {
-    const providers: Record<QualityOption, ProviderOption[]> = {
-      '360p': [],
-      '480p': [],
-      '720p': [],
+  // Daftar episode diambil dari halaman detail animenya. Slug induk baru
+  // diketahui setelah data episode tiba (atau dari pemetaan lokal), jadi
+  // permintaannya menyusul dan tidak menahan pemutaran.
+  const fetchEpisodeList = useCallback(
+    () => (animeSlug ? getDetail(animeSlug) : Promise.resolve(null)),
+    [animeSlug],
+  )
+  const {
+    data: animeDetail,
+    loading: episodeListLoading,
+    error: episodeListError,
+  } = useAsyncData(fetchEpisodeList, { enabled: Boolean(animeSlug) })
+
+  const episodeList = useMemo(() => animeDetail?.episode_lists ?? [], [animeDetail])
+  const episodeListRef = useRef<HTMLDivElement>(null)
+
+  // Daftarnya panjang dan episode yang diputar bisa ada di tengah; posisinya
+  // digeser di dalam kotak daftar saja, tanpa menggulir halaman.
+  useEffect(() => {
+    const container = episodeListRef.current
+    const active = container?.querySelector<HTMLElement>('[data-active="true"]')
+
+    if (!container || !active) {
+      return
     }
 
-    const seen = new Set<string>()
-
-    const mappedDownloads = [
-      ...(data?.download_urls?.mp4 ?? []).map((item) => ({ ...item, format: 'mp4' as const })),
-      ...(data?.download_urls?.mkv ?? []).map((item) => ({ ...item, format: 'mkv' as const })),
-    ]
-
-    mappedDownloads.forEach((entry) => {
-      const quality = getQualityFromResolution(entry.resolution)
-
-      if (!quality) {
-        return
-      }
-
-      entry.urls.forEach((source, index) => {
-        if (!source.url) {
-          return
-        }
-
-        const providerLabel = `${source.provider ?? 'Provider'}${entry.format === 'mkv' ? ' (MKV)' : ''}`
-        const key = `${quality}-${providerLabel}-${source.url}-${index}`
-
-        if (seen.has(key)) {
-          return
-        }
-
-        seen.add(key)
-        providers[quality].push({
-          key,
-          provider: providerLabel,
-          url: source.url,
-        })
-      })
-    })
-
-    return providers
-  }, [data])
-
-  const fallbackQuality = useMemo<QualityOption>(() => {
-    return QUALITY_OPTIONS.find((quality) => providersByQuality[quality].length > 0) ?? '360p'
-  }, [providersByQuality])
-
-  const activeQuality: QualityOption = providersByQuality[selectedQuality].length > 0 ? selectedQuality : fallbackQuality
-
-  const activeProviders = providersByQuality[activeQuality]
-
-  const activeProvider = useMemo(() => {
-    const pickedProviderKey = selectedProviderKey[activeQuality]
-    return activeProviders.find((provider) => provider.key === pickedProviderKey) ?? activeProviders[0] ?? null
-  }, [activeProviders, activeQuality, selectedProviderKey])
+    container.scrollTop = active.offsetTop - container.clientHeight / 2 + active.clientHeight / 2
+  }, [endpoint, episodeList])
 
   const servers = data?.servers ?? []
 
@@ -181,7 +104,7 @@ const WatchPage = () => {
   useSeo({
     title: data ? `Nonton ${episodeLabel} Sub Indo` : 'Nonton Anime',
     description: data
-      ? `Streaming ${episodeLabel}${animeMeta?.title ? ` dari ${animeMeta.title}` : ''} subtitle Indonesia gratis di SatoruStream. Tersedia kualitas 360p, 480p, dan 720p.`
+      ? `Streaming ${episodeLabel}${animeMeta?.title ? ` dari ${animeMeta.title}` : ''} subtitle Indonesia gratis di SatoruStream. Tersedia beberapa server pemutar.`
       : 'Streaming episode anime subtitle Indonesia di SatoruStream.',
     image: animeMeta?.poster,
     canonicalPath,
@@ -207,7 +130,6 @@ const WatchPage = () => {
   })
 
   const handlePickServer = async (server: StreamServer | null) => {
-    setPlayerMode('server')
     setServerError(null)
 
     if (!server) {
@@ -233,19 +155,15 @@ const WatchPage = () => {
     }
   }
 
-  const activeServerUrl =
-    selectedServerKey === DEFAULT_SERVER_KEY ? data?.iframe_url : serverUrls[selectedServerKey]
-
-  const rawPlayerUrl = playerMode === 'server' ? activeServerUrl : activeProvider?.url
-  const isBlockedProvider = playerMode === 'download' && isIframeBlockedProvider(rawPlayerUrl)
-  const activePlayerUrl = isBlockedProvider ? null : rawPlayerUrl || null
+  const activePlayerUrl =
+    (selectedServerKey === DEFAULT_SERVER_KEY
+      ? data?.iframe_url
+      : serverUrls[selectedServerKey]) || null
 
   const activeSourceLabel =
-    playerMode === 'server'
-      ? selectedServerKey === DEFAULT_SERVER_KEY
-        ? 'Default Stream'
-        : (servers.find((server) => server.serverId === selectedServerKey)?.title ?? 'Server')
-      : activeProvider?.provider
+    selectedServerKey === DEFAULT_SERVER_KEY
+      ? 'Default Stream'
+      : (servers.find((server) => server.serverId === selectedServerKey)?.title ?? 'Server')
 
   if (loading) {
     return (
@@ -298,7 +216,7 @@ const WatchPage = () => {
               onClick={() => void handlePickServer(null)}
               disabled={!data.iframe_url}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                playerMode === 'server' && selectedServerKey === DEFAULT_SERVER_KEY
+                selectedServerKey === DEFAULT_SERVER_KEY
                   ? 'border-rose-300 bg-rose-50 text-rose-600'
                   : data.iframe_url
                     ? 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
@@ -309,7 +227,7 @@ const WatchPage = () => {
             </button>
 
             {servers.map((server) => {
-              const isSelected = playerMode === 'server' && selectedServerKey === server.serverId
+              const isSelected = selectedServerKey === server.serverId
 
               return (
                 <button
@@ -337,70 +255,6 @@ const WatchPage = () => {
           ) : null}
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Quality</p>
-          {QUALITY_OPTIONS.map((quality) => {
-            const available = providersByQuality[quality].length > 0
-            const isActive = activeQuality === quality
-
-            return (
-              <button
-                key={quality}
-                type="button"
-                disabled={!available}
-                onClick={() => setSelectedQuality(quality)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-                  isActive
-                    ? 'border-rose-300 bg-rose-50 text-rose-600'
-                    : available
-                      ? 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
-                      : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                }`}
-              >
-                {quality}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Providers {activeQuality}
-          </p>
-
-          {activeProviders.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {activeProviders.map((provider) => {
-                const isSelected = playerMode === 'download' && activeProvider?.key === provider.key
-
-                return (
-                  <button
-                    key={provider.key}
-                    type="button"
-                    onClick={() => {
-                      setPlayerMode('download')
-                      setSelectedQuality(activeQuality)
-                      setSelectedProviderKey((previous) => ({
-                        ...previous,
-                        [activeQuality]: provider.key,
-                      }))
-                    }}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                      isSelected
-                        ? 'border-rose-300 bg-rose-50 text-rose-600'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
-                    }`}
-                  >
-                    {provider.provider}
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="mt-2 text-xs text-slate-500">Provider untuk kualitas ini belum tersedia.</p>
-          )}
-        </div>
-
         {activePlayerUrl ? (
           <iframe
             src={activePlayerUrl}
@@ -422,23 +276,9 @@ const WatchPage = () => {
               ) : (
                 <>
                   <Clapperboard className="mx-auto h-8 w-8" />
-                  {isBlockedProvider && activeProvider ? (
-                    <>
-                      <p className="mt-2 text-sm">
-                        Provider ini memblokir pemutaran di dalam aplikasi (refused to connect).
-                      </p>
-                      <a
-                        href={activeProvider.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-3 inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
-                      >
-                        Buka di tab baru
-                      </a>
-                    </>
-                  ) : (
-                    <p className="mt-2 text-sm">No stream source available.</p>
-                  )}
+                  <p className="mt-2 text-sm">
+                    Server ini tidak mengirimkan tautan pemutar. Coba pilih server lain di atas.
+                  </p>
                 </>
               )}
             </div>
@@ -494,6 +334,108 @@ const WatchPage = () => {
           )}
         </div>
       </div>
+
+      {/* Daftar episode di bawah kotak pemutar: pindah episode tanpa harus
+          kembali ke halaman detail, dan episode yang sedang diputar ditandai. */}
+      <section className="surface-panel mt-4 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300">
+              <ListVideo className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Daftar Episode</h2>
+              <p className="text-xs text-slate-500">
+                {animeMeta?.title || animeDetail?.title || 'Anime ini'}
+                {episodeList.length > 0 ? ` · ${episodeList.length} episode` : ''}
+              </p>
+            </div>
+          </div>
+
+          {animeSlug ? (
+            <Link
+              to={`/anime/${animeSlug}`}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+            >
+              Detail anime
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          ) : null}
+        </div>
+
+        <div ref={episodeListRef} className="relative mt-3 max-h-[22rem] overflow-y-auto pr-1">
+          {!animeSlug ? (
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+              Induk anime untuk episode ini belum diketahui. Buka lewat halaman detail anime supaya
+              daftar episodenya bisa ditampilkan.
+            </p>
+          ) : episodeListLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index} className="h-11 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+              ))}
+            </div>
+          ) : episodeListError ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+              Daftar episode gagal dimuat: {episodeListError}
+            </p>
+          ) : episodeList.length === 0 ? (
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+              Sumber ini tidak mengirimkan daftar episode.
+            </p>
+          ) : (
+            <ol className="space-y-1.5">
+              {episodeList.map((episode, index) => {
+                const isActive = Boolean(episode.slug) && episode.slug === endpoint
+                const label =
+                  stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
+                  episode.episode ||
+                  'Episode'
+                const number = episodeNumberFrom(episode.episode) ?? String(episodeList.length - index)
+
+                if (!episode.slug) {
+                  return null
+                }
+
+                return (
+                  <li key={episode.slug}>
+                    <Link
+                      to={`/watch/${episode.slug}`}
+                      data-active={isActive}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
+                        isActive
+                          ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/60 dark:bg-rose-950/40 dark:text-rose-200'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex h-7 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                          isActive
+                            ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {isActive ? <Play className="h-3.5 w-3.5" /> : number}
+                      </span>
+
+                      <span className="line-clamp-1 flex-1">{label}</span>
+
+                      {isActive ? (
+                        <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-600 dark:bg-rose-900/60 dark:text-rose-200">
+                          Sedang ditonton
+                        </span>
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
