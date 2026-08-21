@@ -133,7 +133,7 @@ const WishlistPage = () => {
                       src={entry.poster || 'https://placehold.co/480x640?text=No+Image'}
                       alt={entry.title || 'Anime poster'}
                       loading="lazy"
-                      title={`Disimpan dari sumber ${entry.sourceId}. Ganti pemilih Sumber di atas untuk membukanya.`}
+                      title={`Disimpan dari sumber ${entry.sourceId}. Ganti sumber dari beranda untuk membukanya.`}
                       className="h-full w-full object-cover opacity-70"
                     />
                   )}
@@ -165,7 +165,7 @@ const WishlistPage = () => {
                   </Link>
                 ) : (
                   <p
-                    title={`Disimpan dari sumber ${entry.sourceId}. Ganti pemilih Sumber di atas untuk membukanya.`}
+                    title={`Disimpan dari sumber ${entry.sourceId}. Ganti sumber dari beranda untuk membukanya.`}
                     className="line-clamp-2 pt-2 text-sm font-semibold leading-5 text-slate-400"
                   >
                     {entry.title || 'Untitled Anime'}

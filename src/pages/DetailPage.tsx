@@ -205,8 +205,8 @@ const DetailPage = () => {
               {!capabilities.streaming ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   {source.label} tidak menyediakan pemutaran episode dari aplikasi ini.
-                  Pilih platform lain lewat pemilih <span className="font-semibold">Sumber</span>{' '}
-                  di bagian atas untuk menonton.
+                  Ganti sumber dari <span className="font-semibold">beranda</span> untuk
+                  menonton.
                 </p>
               ) : anime.episode_lists?.length ? (
                 anime.episode_lists.map((episode) => (

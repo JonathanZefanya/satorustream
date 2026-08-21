@@ -262,6 +262,11 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
   const accountName =
     (user?.user_metadata?.display_name as string | undefined) ?? user?.email?.split('@')[0]
 
+  // Pemilih sumber hanya relevan sekali di awal: begitu sebuah sumber dipakai,
+  // slug anime, riwayat, dan wishlist semuanya terikat padanya. Jadi tombolnya
+  // cukup ada di beranda dan tidak ikut meramaikan header di halaman lain.
+  const isHome = location.pathname === '/'
+
   const currentQuery =
     location.pathname === '/search'
       ? (new URLSearchParams(location.search).get('q') ?? '')
@@ -441,10 +446,10 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             </div>
           </form>
 
-          {/* Pemilih platform. Tersedia untuk tamu maupun pengguna yang sudah
-              masuk; pilihannya disimpan per perangkat, dengan VITE_API_SOURCE
-              sebagai nilai awal. */}
-          <SourcePicker value={sourceId} options={options} onChange={setSourceId} />
+          {/* Pemilih platform, khusus beranda. Tersedia untuk tamu maupun
+              pengguna yang sudah masuk; pilihannya disimpan per perangkat,
+              dengan VITE_API_SOURCE sebagai nilai awal. */}
+          {isHome && <SourcePicker value={sourceId} options={options} onChange={setSourceId} />}
 
           <div className="order-1 flex shrink-0 items-center gap-2 md:order-4">
             <button
