@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
+import Pagination from '../components/Pagination'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
@@ -179,29 +180,11 @@ const GenreListPage = () => {
             ))}
           </div>
 
-          {genreAnime?.pagination && genreAnime.pagination.last_visible_page > 1 && (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-slate-600">
-              <button
-                type="button"
-                onClick={() => handleChangePage(genreAnime.pagination?.previous_page ?? 1)}
-                disabled={!genreAnime.pagination.has_previous_page}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-200 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Prev
-              </button>
-              <span className="text-xs text-slate-500">
-                Page {currentPage} of {genreAnime.pagination.last_visible_page}
-              </span>
-              <button
-                type="button"
-                onClick={() => handleChangePage(genreAnime.pagination?.next_page ?? currentPage + 1)}
-                disabled={!genreAnime.pagination.has_next_page}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-200 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <Pagination
+            pagination={genreAnime?.pagination}
+            currentPage={currentPage}
+            onChange={handleChangePage}
+          />
         </>
       )}
     </div>

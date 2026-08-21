@@ -1,15 +1,3 @@
-/**
- * Membuat robots.txt dan sitemap.xml ke folder dist setelah `vite build`.
- *
- * Dibuat saat build, bukan ditaruh statis di public/, supaya domainnya selalu
- * ikut VITE_SITE_URL. Kalau ditulis manual di dua tempat, canonical dan sitemap
- * gampang menunjuk domain berbeda — dan itu langsung merusak pengindeksan.
- *
- * Halaman detail anime dan episode tidak dimasukkan: daftarnya datang dari API
- * pihak ketiga dan berubah tiap hari. Google menemukannya lewat tautan internal
- * dari beranda, katalog A-Z, dan halaman genre.
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
