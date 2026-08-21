@@ -3,32 +3,81 @@ import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import Pagination from '../components/Pagination'
 import { CardSkeleton } from '../components/Skeletons'
+import { useSource } from '../contexts/sourceContext'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
-import { getOngoingPage } from '../services/api'
+import { getCompletePage, getOngoingPage } from '../services/api'
+
+type TabKey = 'ongoing' | 'completed'
+
+const TAB_COPY: Record<
+  TabKey,
+  { label: string; heading: string; subtitle: string; empty: string }
+> = {
+  ongoing: {
+    label: 'OnGoing',
+    heading: 'OnGoing Anime',
+    subtitle: 'Anime yang sedang tayang musim ini.',
+    empty: 'Data ongoing belum tersedia.',
+  },
+  completed: {
+    label: 'Complete',
+    heading: 'Complete Anime',
+    subtitle: 'Anime yang sudah tamat dan lengkap semua episodenya.',
+    empty: 'Data anime tamat belum tersedia.',
+  },
+}
+
+const TAB_KEYS: TabKey[] = ['ongoing', 'completed']
 
 const OngoingPage = () => {
-  // Nomor halaman disimpan di URL supaya bisa dibagikan, di-bookmark, dan
-  // tombol back browser mengembalikan ke halaman yang sama.
+  const { capabilities } = useSource()
+
+  // Tab dan nomor halaman disimpan di URL supaya bisa dibagikan, di-bookmark,
+  // dan tombol back browser mengembalikan ke tampilan yang sama.
   const [searchParams, setSearchParams] = useSearchParams()
   const pageParam = Number(searchParams.get('page') ?? '1')
   const currentPage = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
 
-  const fetchOngoing = useCallback(() => getOngoingPage(currentPage), [currentPage])
-  const { data, loading, error, reload } = useAsyncData(fetchOngoing)
+  // Tautan lama atau sumber yang baru diganti bisa meminta tab yang tidak
+  // didukung — dalam hal itu tampilkan ongoing daripada halaman error.
+  const wantsCompleted = searchParams.get('tab') === 'completed'
+  const activeTab: TabKey = wantsCompleted && capabilities.completed ? 'completed' : 'ongoing'
+  const copy = TAB_COPY[activeTab]
+  const isCompleted = activeTab === 'completed'
+
+  const fetchPage = useCallback(
+    () => (activeTab === 'completed' ? getCompletePage(currentPage) : getOngoingPage(currentPage)),
+    [activeTab, currentPage],
+  )
+  const { data, loading, error, reload } = useAsyncData(fetchPage)
+
+  const pageSuffix = currentPage > 1 ? ` (Halaman ${currentPage})` : ''
+  const canonicalQuery = [isCompleted ? 'tab=completed' : '', currentPage > 1 ? `page=${currentPage}` : '']
+    .filter(Boolean)
+    .join('&')
 
   useSeo({
-    title: `Anime Ongoing Sub Indo — Sedang Tayang Musim Ini${
-      currentPage > 1 ? ` (Halaman ${currentPage})` : ''
-    }`,
-    description:
-      'Daftar anime ongoing subtitle Indonesia yang sedang tayang musim ini, lengkap dengan episode terbaru dan update mingguan.',
-    canonicalPath: currentPage > 1 ? `/ongoing?page=${currentPage}` : '/ongoing',
-    keywords: ['anime ongoing', 'anime sedang tayang', 'anime musim ini', 'anime ongoing sub indo'],
+    title: isCompleted
+      ? `Anime Complete Sub Indo — Sudah Tamat${pageSuffix}`
+      : `Anime Ongoing Sub Indo — Sedang Tayang Musim Ini${pageSuffix}`,
+    description: isCompleted
+      ? 'Daftar anime yang sudah tamat dengan subtitle Indonesia, lengkap dari episode pertama sampai terakhir.'
+      : 'Daftar anime ongoing subtitle Indonesia yang sedang tayang musim ini, lengkap dengan episode terbaru dan update mingguan.',
+    canonicalPath: canonicalQuery ? `/ongoing?${canonicalQuery}` : '/ongoing',
+    keywords: isCompleted
+      ? ['anime complete', 'anime tamat', 'anime selesai sub indo', 'anime end sub indo']
+      : ['anime ongoing', 'anime sedang tayang', 'anime musim ini', 'anime ongoing sub indo'],
   })
 
-  const handleChangePage = (page: number) => {
+  const buildParams = (tab: TabKey, page: number) => {
     const params = new URLSearchParams(searchParams)
+
+    if (tab === 'completed') {
+      params.set('tab', 'completed')
+    } else {
+      params.delete('tab')
+    }
 
     // Halaman pertama tidak perlu parameter — biarkan URL-nya bersih.
     if (page <= 1) {
@@ -37,7 +86,19 @@ const OngoingPage = () => {
       params.set('page', String(page))
     }
 
-    setSearchParams(params)
+    return params
+  }
+
+  const handleChangePage = (page: number) => {
+    setSearchParams(buildParams(activeTab, page))
+  }
+
+  // Ganti tab selalu kembali ke halaman 1: nomor halaman tab lama tidak ada
+  // hubungannya dengan panjang daftar tab yang baru.
+  const handleChangeTab = (tab: TabKey) => {
+    if (tab !== activeTab) {
+      setSearchParams(buildParams(tab, 1))
+    }
   }
 
   const items = data?.items ?? []
@@ -47,11 +108,9 @@ const OngoingPage = () => {
     <div className="container-app py-6 sm:py-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="section-title">OnGoing Anime</h1>
+          <h1 className="section-title">{copy.heading}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {lastPage && lastPage > 1
-              ? `Halaman ${currentPage} dari ${lastPage}`
-              : 'Anime yang sedang tayang musim ini.'}
+            {lastPage && lastPage > 1 ? `Halaman ${currentPage} dari ${lastPage}` : copy.subtitle}
           </p>
         </div>
         <button
@@ -63,6 +122,36 @@ const OngoingPage = () => {
         </button>
       </div>
 
+      {/* Tab hanya berguna kalau sumbernya memang punya daftar completed. */}
+      {capabilities.completed && (
+        <div
+          role="tablist"
+          aria-label="Status anime"
+          className="mb-5 inline-flex gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+        >
+          {TAB_KEYS.map((tab) => {
+            const isActive = tab === activeTab
+
+            return (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => handleChangeTab(tab)}
+                className={`rounded-lg px-4 py-1.5 text-xs font-bold transition ${
+                  isActive
+                    ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-300'
+                }`}
+              >
+                {TAB_COPY[tab].label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {loading && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           <CardSkeleton count={12} />
@@ -71,7 +160,7 @@ const OngoingPage = () => {
 
       {!loading && error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat anime ongoing.</p>
+          <p className="font-semibold">Gagal memuat daftar anime.</p>
           <p className="mt-1">{error}</p>
         </div>
       )}
@@ -90,7 +179,7 @@ const OngoingPage = () => {
               </button>
             </>
           ) : (
-            'Data ongoing belum tersedia.'
+            copy.empty
           )}
         </div>
       )}
