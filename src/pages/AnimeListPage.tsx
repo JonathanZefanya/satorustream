@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
@@ -12,8 +13,11 @@ import {
   saveCachedPosterIndex,
   type PosterIndex,
 } from '../utils/animeCache'
+import { readJson, scopedKey, writeJson } from '../utils/storage'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
+const DEFAULT_LETTER = '#'
+const LAST_LETTER_KEY = 'anime-list-letter-v1'
 const MAX_PAGE_FETCH = 1000
 const CONCURRENT_PAGE_FETCH = 5
 
@@ -101,7 +105,33 @@ const buildPosterIndex = async (): Promise<PosterIndex> => {
 }
 
 const AnimeListPage = () => {
-  const [selectedLetter, setSelectedLetter] = useState<string>('A')
+  // Huruf aktif disimpan di URL supaya refresh dan tombol back membuka huruf
+  // yang sama; localStorage dipakai saat halaman dibuka tanpa parameter.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const letterParam = searchParams.get('letter')?.toUpperCase()
+  const storedLetter = useMemo(() => readJson<string>(scopedKey(LAST_LETTER_KEY)), [])
+  const selectedLetter =
+    letterParam && LETTERS.includes(letterParam)
+      ? letterParam
+      : storedLetter && LETTERS.includes(storedLetter)
+        ? storedLetter
+        : DEFAULT_LETTER
+
+  const selectLetter = useCallback(
+    (letter: string) => {
+      writeJson(scopedKey(LAST_LETTER_KEY), letter)
+      setSearchParams({ letter }, { replace: true })
+    },
+    [setSearchParams],
+  )
+
+  // Huruf hasil pemulihan dari localStorage disalin ke URL supaya alamatnya
+  // tetap bisa dibagikan dan refresh berikutnya tidak bergantung pada storage.
+  useEffect(() => {
+    if (letterParam !== selectedLetter) {
+      setSearchParams({ letter: selectedLetter }, { replace: true })
+    }
+  }, [letterParam, selectedLetter, setSearchParams])
 
   useSeo({
     title: 'Daftar Anime A-Z — Katalog Lengkap Sub Indo',
@@ -193,7 +223,7 @@ const AnimeListPage = () => {
             <button
               key={letter}
               type="button"
-              onClick={() => setSelectedLetter(letter)}
+              onClick={() => selectLetter(letter)}
               className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
                 selectedLetter === letter
                   ? 'border-rose-300 bg-rose-50 text-rose-600'
