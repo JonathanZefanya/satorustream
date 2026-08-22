@@ -8,7 +8,7 @@ import type {
   ScheduleDay,
   StreamServer,
 } from '../../types/anime'
-import { UnsupportedFeatureError, type SourceAdapter } from './types'
+import type { SourceAdapter } from './types'
 import {
   encodeSegment,
   genreFromLink,
@@ -93,8 +93,7 @@ export const oploverzAdapter: SourceAdapter = {
     search: true,
     genres: true,
     schedule: true,
-    // Oploverz tidak punya katalog A-Z.
-    animeList: false,
+    animeList: true,
     streaming: true,
   },
 
@@ -130,8 +129,18 @@ export const oploverzAdapter: SourceAdapter = {
       .filter((entry) => entry.items.length > 0)
   },
 
-  getAnimeCollections(): Promise<AnimeCollection[]> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime A-Z'))
+  async getAnimeCollections(): Promise<AnimeCollection[]> {
+    const data = await getPayload<{ initial: string; animeList: UrlLink[] }[]>(
+      `${PREFIX}/anime-list`,
+    )
+    return data.map((entry) => ({
+      initial: entry.initial,
+      items: (entry.animeList ?? []).map((link) => ({
+        title: cleanTitle(link.title),
+        slug: idFromUrl(link.url),
+        otakudesu_url: link.url,
+      })),
+    }))
   },
 
   async getGenres(): Promise<Genre[]> {

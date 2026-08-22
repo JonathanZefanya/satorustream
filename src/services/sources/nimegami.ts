@@ -97,9 +97,8 @@ export const nimegamiAdapter: SourceAdapter = {
     completed: false,
     search: true,
     genres: true,
-    // Jadwalnya datar, tanpa pengelompokan hari.
-    schedule: false,
-    animeList: false,
+    schedule: true,
+    animeList: true,
     streaming: true,
   },
 
@@ -119,12 +118,26 @@ export const nimegamiAdapter: SourceAdapter = {
     return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime selesai'))
   },
 
-  getSchedule(): Promise<ScheduleDay[]> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Jadwal rilis per hari'))
+  async getSchedule(): Promise<ScheduleDay[]> {
+    const data = await getPayload<{ day: string; animeList: AnimeCard[] }[]>(`${PREFIX}/schedule`)
+
+    return data
+      .map((entry) => ({ day: entry.day, items: (entry.animeList ?? []).map(fromCard) }))
+      .filter((entry) => entry.items.length > 0)
   },
 
-  getAnimeCollections(): Promise<AnimeCollection[]> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime A-Z'))
+  async getAnimeCollections(): Promise<AnimeCollection[]> {
+    const data = await getPayload<{ initial: string; animeList: UrlLink[] }[]>(
+      `${PREFIX}/anime-list`,
+    )
+    return data.map((entry) => ({
+      initial: entry.initial,
+      items: (entry.animeList ?? []).map((link) => ({
+        title: link.title,
+        slug: idFromUrl(link.url),
+        otakudesu_url: link.url,
+      })),
+    }))
   },
 
   async getGenres(): Promise<Genre[]> {
