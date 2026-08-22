@@ -6,7 +6,6 @@ import type {
   Genre,
   PagedItems,
   ScheduleDay,
-  StreamServer,
 } from '../../types/anime'
 import { UnsupportedFeatureError, type SourceAdapter } from './types'
 import {
@@ -22,85 +21,82 @@ import {
   type UrlLink,
 } from './shared'
 
-const PREFIX = '/nimegami'
-const LABEL = 'Nimegami'
+const PREFIX = '/doronime'
+const LABEL = 'Doronime (Download)'
 
 type AnimeCard = {
   title: string
   slug: string
   poster: string
-  rating: string
-  episode: string
-  studio: string
-  categories: UrlLink[]
   status: string
   type: string
+  score: string
   sourceUrl?: string
-  date: string
 }
 
-type EpisodeItem = { episode: number; title: string; url: string }
+type EpisodeItem = { episode: number; title: string; date: string; url: string }
 
 type AnimeDetailsPayload = {
   title: string
-  alternativeTitle: string
   poster: string
-  rating: string
-  studio: string
-  season: string
-  type: string
-  series: string
-  categories: UrlLink[]
-  credit: string
-  synopsis: string
+  romaji: string
+  english: string
+  alternativeTitle: string
+  status: string
   duration: string
-  downloadLinks: Format[]
+  genreList: UrlLink[]
+  season: string
+  producer: string
+  studio: string
+  releaseDate: string
+  totalEpisode: string
+  score: string
+  synopsis: string
   episodeList: EpisodeItem[]
 }
-
-type StreamSource = { format: string; url: string }
 
 type EpisodeDetailsPayload = {
   title: string
   episode: number
-  poster: string
   animeSlug: string
-  streamSources: StreamSource[]
+  animeUrl: string
+  navigation: { prev: string | null; next: string | null }
   downloadLinks: Format[]
-  navigation: { prev: number | null; next: number | null }
 }
 
 const fromCard = (card: AnimeCard): AnimeItem => ({
   title: card.title,
   slug: card.slug,
   poster: card.poster,
-  current_episode: card.episode ? `Episode ${card.episode}` : undefined,
-  rating: card.rating,
+  rating: card.score,
   status: card.status,
   type: card.type,
-  studio: card.studio,
-  genres: (card.categories ?? []).map(genreFromLink),
-  newest_release_date: card.date,
   otakudesu_url: card.sourceUrl,
 })
 
-/** Episode Nimegami dialamatkan sebagai `<slug anime>/<nomor episode>`. */
-const episodeSlug = (animeSlug: string, episode: number) =>
-  encodeCompositeSlug(animeSlug, String(episode))
+/** Episode Doronime dialamatkan sebagai `<slug anime>/<slug episode>`. */
+const episodeSlug = (animeSlug: string, episodeUrl: string) => {
+  const segments = episodeUrl.split('/').filter(Boolean)
+  return encodeCompositeSlug(animeSlug, segments.at(-1) ?? '')
+}
 
-export const nimegamiAdapter: SourceAdapter = {
-  id: 'nimegami',
+export const doronimeAdapter: SourceAdapter = {
+  id: 'doronime',
   label: LABEL,
   capabilities: {
     ongoing: true,
-    // Tidak ada endpoint daftar completed.
+    // Tidak ada daftar completed tersendiri; katalognya satu aliran.
     completed: false,
     search: true,
     genres: true,
-    schedule: true,
+    // Doronime tidak menerbitkan hari tayang — isi `/schedule` hanya
+    // pengelompokan per penerjemah, jadi tidak dipakai sebagai jadwal rilis.
+    schedule: false,
     animeList: true,
-    streaming: true,
-    downloadOnly: false,
+    // Doronime tidak punya pemutar sama sekali — tiap episode hanya berisi
+    // tautan unduhan, jadi halaman tonton tidak pernah dibuka untuk sumber ini.
+    streaming: false,
+    downloadOnly: true,
   },
 
   async getHome() {
@@ -109,7 +105,7 @@ export const nimegamiAdapter: SourceAdapter = {
   },
 
   async getOngoingPage(page = 1): Promise<PagedItems<AnimeItem>> {
-    const { data, pagination } = await requirePayload<AnimeCard[]>(`${PREFIX}/ongoing`, {
+    const { data, pagination } = await requirePayload<AnimeCard[]>(`${PREFIX}/anime`, {
       params: { page },
     })
     return { items: data.map(fromCard), pagination }
@@ -119,12 +115,8 @@ export const nimegamiAdapter: SourceAdapter = {
     return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime selesai'))
   },
 
-  async getSchedule(): Promise<ScheduleDay[]> {
-    const data = await getPayload<{ day: string; animeList: AnimeCard[] }[]>(`${PREFIX}/schedule`)
-
-    return data
-      .map((entry) => ({ day: entry.day, items: (entry.animeList ?? []).map(fromCard) }))
-      .filter((entry) => entry.items.length > 0)
+  getSchedule(): Promise<ScheduleDay[]> {
+    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Jadwal rilis per hari'))
   },
 
   async getAnimeCollections(): Promise<AnimeCollection[]> {
@@ -142,12 +134,13 @@ export const nimegamiAdapter: SourceAdapter = {
   },
 
   async getGenres(): Promise<Genre[]> {
-    const data = await getPayload<UrlLink[]>(`${PREFIX}/genre`)
+    const data = await getPayload<{ title: string; genreId: string; sourceUrl?: string }[]>(
+      `${PREFIX}/genre`,
+    )
     return data.map((genre) => ({
-      // Nimegami menulis jumlah judul di nama genre ("Action (1526)").
-      name: genre.title.replace(/\s*\(\d+\)\s*$/, '').trim(),
-      slug: idFromUrl(genre.url),
-      otakudesu_url: genre.url,
+      name: genre.title,
+      slug: genre.genreId,
+      otakudesu_url: genre.sourceUrl,
     }))
   },
 
@@ -173,21 +166,20 @@ export const nimegamiAdapter: SourceAdapter = {
 
     return {
       title: payload.title,
-      japanese_title: payload.alternativeTitle,
+      japanese_title: payload.romaji || payload.alternativeTitle,
       poster: payload.poster,
-      rating: payload.rating,
-      type: payload.type,
+      rating: payload.score,
+      type: payload.totalEpisode,
+      status: payload.status,
       studio: payload.studio,
-      release_date: payload.season,
-      duration: payload.duration,
-      produser: payload.credit,
-      episode_count: String(payload.episodeList?.length ?? ''),
-      genres: (payload.categories ?? []).map(genreFromLink),
+      release_date: payload.releaseDate,
+      genres: (payload.genreList ?? []).map(genreFromLink),
       synopsis: payload.synopsis,
       batch: null,
       episode_lists: (payload.episodeList ?? []).map((episode) => ({
         episode: episode.title,
-        slug: episodeSlug(endpoint, episode.episode),
+        slug: episodeSlug(endpoint, episode.url),
+        otakudesu_url: episode.url,
       })),
       recommendations: [],
     }
@@ -197,39 +189,48 @@ export const nimegamiAdapter: SourceAdapter = {
     const [animeSlug, episode] = splitCompositeSlug(endpoint)
 
     if (!animeSlug || !episode) {
-      throw new Error('Episode endpoint harus berbentuk <slug anime>/<nomor episode>.')
+      throw new Error('Episode endpoint harus berbentuk <slug anime>/<slug episode>.')
     }
 
     const payload = await getPayload<EpisodeDetailsPayload>(
-      `${PREFIX}/episode/${animeSlug}/${episode}`,
+      `${PREFIX}/episode/${encodeURIComponent(animeSlug)}/${encodeURIComponent(episode)}`,
     )
 
-    const decodedSlug = decodeURIComponent(animeSlug)
     const prev = payload.navigation?.prev ?? null
     const next = payload.navigation?.next ?? null
 
-    // Tiap resolusi sudah berupa halaman pemutar tersendiri, jadi bisa langsung
-    // dipakai sebagai pilihan server tanpa permintaan tambahan.
-    const servers = (payload.streamSources ?? []).map((source) => ({
-      title: source.format || 'Default',
-      serverId: source.url,
-    }))
-
     return {
       episode: payload.title,
-      anime: { slug: decodedSlug },
-      has_previous_episode: prev !== null,
-      previous_episode: prev !== null ? { slug: episodeSlug(decodedSlug, prev) } : null,
-      has_next_episode: next !== null,
-      next_episode: next !== null ? { slug: episodeSlug(decodedSlug, next) } : null,
-      iframe_url: servers[0]?.serverId ?? '',
-      servers,
+      anime: { slug: payload.animeSlug || animeSlug, otakudesu_url: payload.animeUrl },
+      has_previous_episode: Boolean(prev),
+      previous_episode: prev
+        ? { slug: episodeSlug(animeSlug, prev), otakudesu_url: prev }
+        : null,
+      has_next_episode: Boolean(next),
+      next_episode: next ? { slug: episodeSlug(animeSlug, next), otakudesu_url: next } : null,
+      // Tanpa pemutar: halaman tonton tidak dipakai, hanya daftar unduhannya.
+      iframe_url: '',
+      servers: [],
       download_urls: toDownloadUrls(payload.downloadLinks),
     }
   },
 
-  /** serverId sudah berupa URL pemutar — tidak perlu diselesaikan lagi. */
-  getStreamServer(server: StreamServer): Promise<string> {
-    return Promise.resolve(server.serverId)
+  getStreamServer(): Promise<string> {
+    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Streaming'))
+  },
+
+  /**
+   * Tautan unduhannya masih menunjuk halaman safelink Doronime. Backend yang
+   * melewatinya supaya pengguna langsung mendapat URL host (Google Drive,
+   * AceFile) tanpa hitungan mundur dan halaman iklan.
+   */
+  async resolveDownload(downloadUrl: string): Promise<string> {
+    const id = new URL(downloadUrl).searchParams.get('id')
+    if (!id) return downloadUrl
+
+    const { url } = await getPayload<{ url: string }>(
+      `${PREFIX}/download/${encodeURIComponent(id)}`,
+    )
+    return url || downloadUrl
   },
 }

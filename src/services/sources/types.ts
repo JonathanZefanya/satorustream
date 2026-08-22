@@ -27,6 +27,12 @@ export interface SourceCapabilities {
   animeList: boolean
   /** Halaman tonton — sumber menyediakan URL pemutar. */
   streaming: boolean
+  /**
+   * Sumber tanpa pemutar sama sekali; episodenya hanya berisi tautan unduhan.
+   * Halaman episode tetap dibuka, tapi kotak pemutar dan pemilih server
+   * digantikan daftar unduhan.
+   */
+  downloadOnly: boolean
 }
 
 export interface SourceAdapter {
@@ -45,6 +51,12 @@ export interface SourceAdapter {
   getDetail(endpoint: string): Promise<AnimeDetail>
   getEpisode(endpoint: string): Promise<EpisodeDetail>
   getStreamServer(server: StreamServer): Promise<string>
+  /**
+   * Beberapa sumber menyembunyikan tujuan unduhan di balik halaman perantara.
+   * Kalau tersedia, tautan diselesaikan dulu supaya pengguna langsung mendarat
+   * di hostnya.
+   */
+  resolveDownload?(url: string): Promise<string>
 }
 
 /** Dilempar ketika halaman meminta fitur yang tidak dimiliki sumber aktif. */

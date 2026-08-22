@@ -92,6 +92,7 @@ export const kuramanimeAdapter: SourceAdapter = {
     // URL video dihasilkan skrip ter-obfuscate dengan token berputar, jadi
     // tidak bisa diambil dari sisi server.
     streaming: false,
+    downloadOnly: false,
   },
 
   async getHome() {

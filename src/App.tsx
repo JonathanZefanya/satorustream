@@ -91,7 +91,13 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
           <Route path="/anime/:endpoint" element={<DetailPage />} />
           <Route
             path="/watch/:endpoint"
-            element={capabilities.streaming ? <WatchPage /> : <Navigate to="/" replace />}
+            element={
+              capabilities.streaming || capabilities.downloadOnly ? (
+                <WatchPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
           <Route
             path="/search"

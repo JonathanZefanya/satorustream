@@ -200,9 +200,11 @@ const DetailPage = () => {
           </div>
 
           <div className="mt-6">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Episodes</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+              {capabilities.downloadOnly ? 'Episodes (unduhan)' : 'Episodes'}
+            </h2>
             <div className="mt-2 max-h-[420px] space-y-2 overflow-y-auto pr-1">
-              {!capabilities.streaming ? (
+              {!capabilities.streaming && !capabilities.downloadOnly ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   {source.label} tidak menyediakan pemutaran episode dari aplikasi ini.
                   Ganti sumber dari <span className="font-semibold">beranda</span> untuk

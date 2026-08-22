@@ -20,6 +20,7 @@ const DEFAULT_LETTER = '#'
 const LAST_LETTER_KEY = 'anime-list-letter-v1'
 const MAX_PAGE_FETCH = 1000
 const CONCURRENT_PAGE_FETCH = 5
+const POSTER_PAGE_BUDGET = 30
 
 const getInitialChar = (title?: string): string => {
   const firstChar = title?.trim().charAt(0).toUpperCase() ?? '#'
@@ -45,6 +46,7 @@ const dedupeAnime = (items: AnimeItem[]): AnimeItem[] => {
 
 const fetchAllPages = async (
   fetchPage: (page: number) => Promise<PagedItems<AnimeItem>>,
+  maxPages = MAX_PAGE_FETCH,
 ): Promise<AnimeItem[]> => {
   const allItems: AnimeItem[] = []
   const firstPage = await fetchPage(1)
@@ -57,7 +59,7 @@ const fetchAllPages = async (
     }
 
     let page = firstPage.pagination.next_page
-    while (page && page <= MAX_PAGE_FETCH) {
+    while (page && page <= maxPages) {
       const result = await fetchPage(page)
       allItems.push(...result.items)
 
@@ -71,7 +73,7 @@ const fetchAllPages = async (
     return allItems
   }
 
-  const lastPage = Math.min(lastPageFromApi, MAX_PAGE_FETCH)
+  const lastPage = Math.min(lastPageFromApi, maxPages)
   const pagesToFetch = Array.from({ length: lastPage - 1 }, (_, index) => index + 2)
 
   for (let index = 0; index < pagesToFetch.length; index += CONCURRENT_PAGE_FETCH) {
@@ -86,19 +88,33 @@ const fetchAllPages = async (
 /**
  * Kumpulkan poster dari halaman ongoing + completed. Berjalan di latar belakang
  * karena butuh banyak request; daftar A-Z sendiri sudah tampil lebih dulu.
+ *
+ * Jumlah halamannya dibatasi: ada sumber yang katalognya ratusan halaman
+ * (Doronime 439), dan menyisirnya habis hanya demi poster pelengkap akan
+ * membanjiri API sepanjang halaman ini terbuka. Poster yang belum terkumpul
+ * cukup tampil sebagai kartu tanpa gambar.
+ *
+ * `allSettled` dipakai karena tidak semua sumber punya daftar completed —
+ * kegagalan salah satunya tidak boleh membuang hasil yang satunya.
  */
 const buildPosterIndex = async (): Promise<PosterIndex> => {
-  const [ongoing, complete] = await Promise.all([
-    fetchAllPages(getOngoingPage),
-    fetchAllPages(getCompletePage),
+  const results = await Promise.allSettled([
+    fetchAllPages(getOngoingPage, POSTER_PAGE_BUDGET),
+    fetchAllPages(getCompletePage, POSTER_PAGE_BUDGET),
   ])
 
   const index: PosterIndex = {}
 
-  ;[...ongoing, ...complete].forEach((anime) => {
-    if (anime.slug && anime.poster && !index[anime.slug]) {
-      index[anime.slug] = anime.poster
+  results.forEach((result) => {
+    if (result.status !== 'fulfilled') {
+      return
     }
+
+    result.value.forEach((anime) => {
+      if (anime.slug && anime.poster && !index[anime.slug]) {
+        index[anime.slug] = anime.poster
+      }
+    })
   })
 
   return index
