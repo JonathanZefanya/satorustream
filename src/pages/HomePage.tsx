@@ -213,10 +213,27 @@ const HomePage = () => {
 
   // Riwayat terikat akun, jadi "Lanjutkan tontonan" hanya untuk yang sudah
   // masuk — dan hanya entri dari sumber yang sedang aktif.
-  const continueWatching = useMemo(
-    () => (user ? getLocalHistoryForActiveSource().slice(0, 6) : []),
-    [user],
-  )
+  const continueWatching = useMemo(() => {
+  if (!user) return []
+
+  const rawHistory = getLocalHistoryForActiveSource()
+
+  // Dedupe per anime — simpan cuma entry terakhir yang ditonton
+  const latestByAnime = new Map<string, (typeof rawHistory)[number]>()
+
+  for (const entry of rawHistory) {
+    const key = entry.animeSlug ?? entry.title ?? '' // fallback kalau slug kosong
+    const existing = latestByAnime.get(key)
+
+    if (!existing || entry.watchedAt > existing.watchedAt) {
+      latestByAnime.set(key, entry)
+    }
+  }
+
+  return Array.from(latestByAnime.values())
+    .sort((a, b) => b.watchedAt - a.watchedAt) // terbaru dulu
+    .slice(0, 6)
+}, [user])
   const recommendedItems = data?.recommendations?.items ?? []
 
   return (
