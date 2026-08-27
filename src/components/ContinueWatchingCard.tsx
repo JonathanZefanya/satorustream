@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { WatchHistoryEntry } from '../utils/watchHistory'
+import { watchPath } from '../utils/routes'
 
 interface ContinueWatchingCardProps {
   entry: WatchHistoryEntry
@@ -15,7 +16,7 @@ const ContinueWatchingCard = ({ entry }: ContinueWatchingCardProps) => {
 
   return (
     <Link
-      to={`/watch/${entry.episodeSlug}`}
+      to={watchPath(entry.episodeSlug)}
       className="group block rounded-2xl border border-slate-200 bg-white p-3 transition hover:border-rose-200"
     >
       <div className="flex gap-3">

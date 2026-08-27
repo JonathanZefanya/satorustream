@@ -9,6 +9,7 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { clearHistoryEntries, getHistory, type HistoryEntry } from '../services/userLibrary'
 import { stripAnimeTitle } from '../utils/episodeLabel'
+import { watchPath } from '../utils/routes'
 
 const formatWatchedAt = (timestamp: number): string => {
   if (!timestamp) {
@@ -202,7 +203,7 @@ const HistoryPage = () => {
                 <div className="flex shrink-0 items-center gap-2">
                   {playable && (
                     <Link
-                      to={`/watch/${entry.episodeSlug}`}
+                      to={watchPath(entry.episodeSlug)}
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                     >
                       <Play className="h-3.5 w-3.5" />
