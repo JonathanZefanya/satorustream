@@ -6,8 +6,9 @@ import type {
   Genre,
   PagedItems,
   ScheduleDay,
+  StreamServer,
 } from '../../types/anime'
-import { UnsupportedFeatureError, type SourceAdapter } from './types'
+import type { SourceAdapter } from './types'
 import {
   encodeSegment,
   genreFromLink,
@@ -59,6 +60,7 @@ type EpisodeDetailsPayload = {
   navigation: { prev: string | null; next: string | null }
   downloadLinks: Format[]
   seriesUrl: string
+  serverList?: StreamServer[]
 }
 
 /**
@@ -91,9 +93,9 @@ export const oploverzAdapter: SourceAdapter = {
     search: true,
     genres: true,
     schedule: true,
-    // Oploverz tidak punya katalog A-Z.
-    animeList: false,
+    animeList: true,
     streaming: true,
+    downloadOnly: false,
   },
 
   async getHome() {
@@ -128,8 +130,18 @@ export const oploverzAdapter: SourceAdapter = {
       .filter((entry) => entry.items.length > 0)
   },
 
-  getAnimeCollections(): Promise<AnimeCollection[]> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime A-Z'))
+  async getAnimeCollections(): Promise<AnimeCollection[]> {
+    const data = await getPayload<{ initial: string; animeList: UrlLink[] }[]>(
+      `${PREFIX}/anime-list`,
+    )
+    return data.map((entry) => ({
+      initial: entry.initial,
+      items: (entry.animeList ?? []).map((link) => ({
+        title: cleanTitle(link.title),
+        slug: idFromUrl(link.url),
+        otakudesu_url: link.url,
+      })),
+    }))
   },
 
   async getGenres(): Promise<Genre[]> {
@@ -200,13 +212,16 @@ export const oploverzAdapter: SourceAdapter = {
       previous_episode: prev ? { slug: idFromUrl(prev), otakudesu_url: prev } : null,
       has_next_episode: Boolean(next),
       next_episode: next ? { slug: idFromUrl(next), otakudesu_url: next } : null,
-      iframe_url: payload.iframe ?? '',
-      servers: [],
+      // Mirror Oploverz sudah berupa URL pemutar utuh, jadi langsung dipakai
+      // sebagai daftar server tanpa permintaan tambahan.
+      iframe_url: payload.iframe || (payload.serverList?.[0]?.serverId ?? ''),
+      servers: payload.serverList ?? [],
       download_urls: toDownloadUrls(payload.downloadLinks),
     }
   },
 
-  getStreamServer(): Promise<string> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Server streaming alternatif'))
+  /** serverId sudah berupa URL pemutar — tidak perlu diselesaikan lagi. */
+  getStreamServer(server: StreamServer): Promise<string> {
+    return Promise.resolve(server.serverId)
   },
 }

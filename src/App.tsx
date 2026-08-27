@@ -1,9 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import PwaPrompt from './components/PwaPrompt'
+import { useScrollRestoration } from './hooks/useScrollRestoration'
 import { useSeo } from './hooks/useSeo'
 import { AuthProvider } from './contexts/AuthProvider'
 import { SourceProvider } from './contexts/SourceProvider'
@@ -56,17 +57,9 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
-  const location = useLocation()
   const { sourceId, capabilities } = useSource()
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
-  }, [location.pathname, location.search])
+  useScrollRestoration()
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -98,7 +91,13 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
           <Route path="/anime/:endpoint" element={<DetailPage />} />
           <Route
             path="/watch/:endpoint"
-            element={capabilities.streaming ? <WatchPage /> : <Navigate to="/" replace />}
+            element={
+              capabilities.streaming || capabilities.downloadOnly ? (
+                <WatchPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
           <Route
             path="/search"

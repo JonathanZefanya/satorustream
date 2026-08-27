@@ -5,6 +5,8 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { useAuth } from '../contexts/authContext'
 import { getDetail, getEpisode, getStreamServer } from '../services/api'
+import { useSource } from '../contexts/sourceContext'
+import DownloadList from '../components/DownloadList'
 import { recordHistory } from '../services/userLibrary'
 import type { StreamServer } from '../types/anime'
 import { episodeNumberFrom, stripAnimeTitle } from '../utils/episodeLabel'
@@ -16,6 +18,8 @@ const DEFAULT_SERVER_KEY = 'default'
 const WatchPage = () => {
   const { endpoint = '' } = useParams()
   const { user } = useAuth()
+  const { capabilities } = useSource()
+  const downloadOnly = capabilities.downloadOnly
   const [selectedServerKey, setSelectedServerKey] = useState<string>(DEFAULT_SERVER_KEY)
   const [serverUrls, setServerUrls] = useState<Record<string, string>>({})
   const [serverLoading, setServerLoading] = useState(false)
@@ -208,6 +212,18 @@ const WatchPage = () => {
   return (
     <div className="container-app py-6 sm:py-8">
       <div className="surface-panel overflow-hidden p-3 sm:p-4">
+        {downloadOnly ? (
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Unduhan
+            </p>
+            <p className="mt-1 mb-3 text-xs text-slate-500 dark:text-slate-400">
+              Sumber ini tidak menyediakan pemutar — episodenya hanya tersedia sebagai berkas
+              unduhan.
+            </p>
+            <DownloadList downloads={data.download_urls} />
+          </div>
+        ) : (
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Server streaming</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -254,8 +270,9 @@ const WatchPage = () => {
             </p>
           ) : null}
         </div>
+        )}
 
-        {activePlayerUrl ? (
+        {downloadOnly ? null : activePlayerUrl ? (
           <iframe
             src={activePlayerUrl}
             title={data.episode}
@@ -287,7 +304,7 @@ const WatchPage = () => {
 
         <h1 className="mt-4 text-lg font-bold text-slate-900 sm:text-xl">{data.episode}</h1>
 
-        {activeSourceLabel ? (
+        {activeSourceLabel && !downloadOnly ? (
           <p className="mt-2 text-xs text-slate-500">
             Sumber aktif: <span className="font-semibold text-slate-700">{activeSourceLabel}</span>
           </p>

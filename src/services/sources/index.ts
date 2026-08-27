@@ -1,3 +1,4 @@
+import { doronimeAdapter } from './doronime'
 import { kuramanimeAdapter } from './kuramanime'
 import { nimegamiAdapter } from './nimegami'
 import { oploverzAdapter } from './oploverz'
@@ -9,6 +10,7 @@ export const SOURCES: Record<string, SourceAdapter> = {
   oploverz: oploverzAdapter,
   nimegami: nimegamiAdapter,
   kuramanime: kuramanimeAdapter,
+  doronime: doronimeAdapter,
 }
 
 export const SOURCE_IDS = Object.keys(SOURCES)
@@ -16,13 +18,19 @@ export const SOURCE_IDS = Object.keys(SOURCES)
 /**
  * Sumber yang hanya boleh dipakai saat pengembangan.
  *
- * Kuramanime berada di belakang Cloudflare yang memblokir IP datacenter, jadi
- * scraper yang berjalan di Vercel selalu dibalas 403 walau situsnya sendiri
- * sehat. Dari IP rumah — termasuk saat `npm run dev` — permintaannya lolos.
- * Karena itu sumbernya tetap tersedia untuk pengembangan, tapi disembunyikan
- * di build produksi supaya pengguna tidak memilih sumber yang pasti gagal.
+ * Keduanya berada di belakang Cloudflare dan menolak permintaan dari IP
+ * datacenter, jadi scraper yang berjalan di Vercel selalu dibalas 403 walau
+ * situsnya sendiri sehat. Dari IP rumah — termasuk saat `npm run dev` —
+ * permintaannya lolos. Karena itu sumbernya tetap tersedia untuk pengembangan,
+ * tapi disembunyikan di build produksi supaya pengguna tidak memilih sumber
+ * yang pasti gagal.
+ *
+ * Doronime memakai Managed Challenge: balasannya halaman "Just a moment…" yang
+ * menuntut JavaScript dan cookie. Tantangan itu tidak bisa dilewati dengan
+ * menyusun header sebaik apa pun — perlu browser sungguhan atau proxy ber-IP
+ * residensial.
  */
-export const DEV_ONLY_SOURCE_IDS = ['kuramanime']
+export const DEV_ONLY_SOURCE_IDS = ['kuramanime', 'doronime']
 
 const isSelectable = (id: string): boolean => {
   return Boolean(SOURCES[id]) && (import.meta.env.DEV || !DEV_ONLY_SOURCE_IDS.includes(id))

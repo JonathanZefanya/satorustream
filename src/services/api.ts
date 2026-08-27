@@ -38,6 +38,10 @@ export const getDetail = (endpoint: string) => getActiveSource().getDetail(endpo
 export const getEpisode = (endpoint: string) => getActiveSource().getEpisode(endpoint)
 export const getStreamServer = (server: StreamServer) => getActiveSource().getStreamServer(server)
 
+/** Sumber tanpa halaman perantara memakai tautannya apa adanya. */
+export const resolveDownload = (url: string) =>
+  getActiveSource().resolveDownload?.(url) ?? Promise.resolve(url)
+
 export const getOngoing = async (page = 1) => (await getActiveSource().getOngoingPage(page)).items
 export const getComplete = async (page = 1) => (await getActiveSource().getCompletePage(page)).items
 
