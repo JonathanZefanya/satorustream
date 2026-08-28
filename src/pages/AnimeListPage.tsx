@@ -1,130 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
-import { getAnimeCollections, getCompletePage, getOngoingPage } from '../services/api'
-import type { AnimeItem, PagedItems } from '../types/anime'
-import {
-  loadCachedAnimeList,
-  loadCachedPosterIndex,
-  saveCachedAnimeList,
-  saveCachedPosterIndex,
-  type PosterIndex,
-} from '../utils/animeCache'
+import { getAnimeListPage } from '../services/api'
 import { readJson, scopedKey, writeJson } from '../utils/storage'
+import Pagination from '../components/Pagination'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const DEFAULT_LETTER = '#'
 const LAST_LETTER_KEY = 'anime-list-letter-v1'
-const MAX_PAGE_FETCH = 1000
-const CONCURRENT_PAGE_FETCH = 5
-const POSTER_PAGE_BUDGET = 30
-
-const getInitialChar = (title?: string): string => {
-  const firstChar = title?.trim().charAt(0).toUpperCase() ?? '#'
-  return /^[A-Z]$/.test(firstChar) ? firstChar : '#'
-}
-
-const dedupeAnime = (items: AnimeItem[]): AnimeItem[] => {
-  const seen = new Set<string>()
-  const result: AnimeItem[] = []
-
-  items.forEach((item) => {
-    const key = item.slug || item.title || `${item.poster}-${item.otakudesu_url}`
-    if (!key || seen.has(key)) {
-      return
-    }
-
-    seen.add(key)
-    result.push(item)
-  })
-
-  return result
-}
-
-const fetchAllPages = async (
-  fetchPage: (page: number) => Promise<PagedItems<AnimeItem>>,
-  maxPages = MAX_PAGE_FETCH,
-): Promise<AnimeItem[]> => {
-  const allItems: AnimeItem[] = []
-  const firstPage = await fetchPage(1)
-  allItems.push(...firstPage.items)
-
-  const lastPageFromApi = firstPage.pagination?.last_visible_page
-  if (!lastPageFromApi || lastPageFromApi <= 1) {
-    if (!firstPage.pagination?.has_next_page || !firstPage.pagination.next_page) {
-      return allItems
-    }
-
-    let page = firstPage.pagination.next_page
-    while (page && page <= maxPages) {
-      const result = await fetchPage(page)
-      allItems.push(...result.items)
-
-      if (!result.pagination?.has_next_page || !result.pagination.next_page) {
-        break
-      }
-
-      page = result.pagination.next_page
-    }
-
-    return allItems
-  }
-
-  const lastPage = Math.min(lastPageFromApi, maxPages)
-  const pagesToFetch = Array.from({ length: lastPage - 1 }, (_, index) => index + 2)
-
-  for (let index = 0; index < pagesToFetch.length; index += CONCURRENT_PAGE_FETCH) {
-    const batch = pagesToFetch.slice(index, index + CONCURRENT_PAGE_FETCH)
-    const results = await Promise.all(batch.map((page) => fetchPage(page)))
-    results.forEach((result) => allItems.push(...result.items))
-  }
-
-  return allItems
-}
-
-/**
- * Kumpulkan poster dari halaman ongoing + completed. Berjalan di latar belakang
- * karena butuh banyak request; daftar A-Z sendiri sudah tampil lebih dulu.
- *
- * Jumlah halamannya dibatasi: ada sumber yang katalognya ratusan halaman
- * (Doronime 439), dan menyisirnya habis hanya demi poster pelengkap akan
- * membanjiri API sepanjang halaman ini terbuka. Poster yang belum terkumpul
- * cukup tampil sebagai kartu tanpa gambar.
- *
- * `allSettled` dipakai karena tidak semua sumber punya daftar completed —
- * kegagalan salah satunya tidak boleh membuang hasil yang satunya.
- */
-const buildPosterIndex = async (): Promise<PosterIndex> => {
-  const results = await Promise.allSettled([
-    fetchAllPages(getOngoingPage, POSTER_PAGE_BUDGET),
-    fetchAllPages(getCompletePage, POSTER_PAGE_BUDGET),
-  ])
-
-  const index: PosterIndex = {}
-
-  results.forEach((result) => {
-    if (result.status !== 'fulfilled') {
-      return
-    }
-
-    result.value.forEach((anime) => {
-      if (anime.slug && anime.poster && !index[anime.slug]) {
-        index[anime.slug] = anime.poster
-      }
-    })
-  })
-
-  return index
-}
 
 const AnimeListPage = () => {
   // Huruf aktif disimpan di URL supaya refresh dan tombol back membuka huruf
   // yang sama; localStorage dipakai saat halaman dibuka tanpa parameter.
   const [searchParams, setSearchParams] = useSearchParams()
   const letterParam = searchParams.get('letter')?.toUpperCase()
+  const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10)
+  const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
   const storedLetter = useMemo(() => readJson<string>(scopedKey(LAST_LETTER_KEY)), [])
   const selectedLetter =
     letterParam && LETTERS.includes(letterParam)
@@ -136,7 +30,7 @@ const AnimeListPage = () => {
   const selectLetter = useCallback(
     (letter: string) => {
       writeJson(scopedKey(LAST_LETTER_KEY), letter)
-      setSearchParams({ letter }, { replace: true })
+      setSearchParams({ letter, page: '1' }, { replace: true })
     },
     [setSearchParams],
   )
@@ -145,7 +39,7 @@ const AnimeListPage = () => {
   // tetap bisa dibagikan dan refresh berikutnya tidak bergantung pada storage.
   useEffect(() => {
     if (letterParam !== selectedLetter) {
-      setSearchParams({ letter: selectedLetter }, { replace: true })
+      setSearchParams({ letter: selectedLetter, page: '1' }, { replace: true })
     }
   }, [letterParam, selectedLetter, setSearchParams])
 
@@ -157,60 +51,21 @@ const AnimeListPage = () => {
     keywords: ['daftar anime', 'anime a-z', 'katalog anime', 'list anime sub indo'],
   })
 
-  const cachedAnime = useMemo(() => loadCachedAnimeList(), [])
-  const [posterIndex, setPosterIndex] = useState<PosterIndex>(() => loadCachedPosterIndex() ?? {})
+  const fetchAnimePage = useCallback(
+    () => getAnimeListPage(selectedLetter, currentPage),
+    [currentPage, selectedLetter],
+  )
+  const { data: pageData, loading, error, reload } = useAsyncData(fetchAnimePage)
+  const visibleAnime = pageData?.items ?? []
+  const pageCount = pageData?.pagination?.last_visible_page ?? 1
 
-  const fetchAllAnime = useCallback(async () => {
-    const collections = await getAnimeCollections()
-    const merged = dedupeAnime(collections.flatMap((collection) => collection.items)).sort((a, b) =>
-      (a.title ?? '').localeCompare(b.title ?? ''),
-    )
-
-    saveCachedAnimeList(merged)
-    return merged
-  }, [])
-
-  const { data, loading, error, reload } = useAsyncData(fetchAllAnime, {
-    initialData: cachedAnime ?? undefined,
-  })
-
-  const hasPosterIndex = Object.keys(posterIndex).length > 0
-
-  useEffect(() => {
-    if (hasPosterIndex) {
-      return
-    }
-
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const index = await buildPosterIndex()
-
-        if (cancelled) {
-          return
-        }
-
-        setPosterIndex(index)
-        saveCachedPosterIndex(index)
-      } catch {
-        // Poster bersifat pelengkap — daftar tetap bisa dipakai tanpa poster.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [hasPosterIndex])
-
-  const filteredAnime = useMemo(() => {
-    return (data ?? [])
-      .filter((anime) => getInitialChar(anime.title) === selectedLetter)
-      .map((anime) => {
-        const poster = anime.poster || (anime.slug ? posterIndex[anime.slug] : undefined)
-        return poster === anime.poster ? anime : { ...anime, poster }
-      })
-  }, [data, posterIndex, selectedLetter])
+  const changePage = useCallback(
+    (page: number) => {
+      setSearchParams({ letter: selectedLetter, page: String(page) }, { replace: true })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    },
+    [selectedLetter, setSearchParams],
+  )
 
   const title = useMemo(() => {
     if (selectedLetter === '#') {
@@ -252,8 +107,8 @@ const AnimeListPage = () => {
         </div>
       </div>
 
-      {loading && !data && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      {loading && !pageData && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           <CardSkeleton count={12} />
         </div>
       )}
@@ -265,18 +120,34 @@ const AnimeListPage = () => {
         </div>
       )}
 
-      {!loading && !error && filteredAnime.length === 0 && (
+      {!loading && !error && visibleAnime.length === 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
           Tidak ada anime dengan huruf awal {selectedLetter}.
         </div>
       )}
 
-      {!error && (filteredAnime.length ?? 0) > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {filteredAnime.map((anime) => (
+      {!error && visibleAnime.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {visibleAnime.map((anime) => (
             <AnimeCard key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`} anime={anime} />
           ))}
         </div>
+      )}
+
+      {!loading && !error && pageCount > 1 && (
+        <Pagination
+          pagination={{
+            current_page: Math.min(currentPage, pageCount),
+            last_visible_page: pageCount,
+            has_next_page: currentPage < pageCount,
+            next_page: currentPage < pageCount ? currentPage + 1 : null,
+            has_previous_page: currentPage > 1,
+            previous_page: currentPage > 1 ? currentPage - 1 : null,
+          }}
+          currentPage={Math.min(currentPage, pageCount)}
+          onChange={changePage}
+          busy={loading}
+        />
       )}
     </div>
   )

@@ -11,8 +11,8 @@
  * render ulang (mis. daftar menu), pakai `useSource()` alih-alih fungsi di sini.
  */
 import { getActiveSource } from './sources'
-import { http } from './sources/shared'
-import type { StreamServer } from '../types/anime'
+import { http, idFromUrl, requirePayload } from './sources/shared'
+import type { AnimeItem, PagedItems, StreamServer } from '../types/anime'
 
 export {
   getActiveSource,
@@ -30,6 +30,22 @@ export const getOngoingPage = (page = 1) => getActiveSource().getOngoingPage(pag
 export const getCompletePage = (page = 1) => getActiveSource().getCompletePage(page)
 export const getSchedule = () => getActiveSource().getSchedule()
 export const getAnimeCollections = () => getActiveSource().getAnimeCollections()
+export const getAnimeListPage = async (initial: string, page = 1): Promise<PagedItems<AnimeItem>> => {
+  const source = getActiveSource()
+  const endpoint = source.id === 'otakudesu' ? 'anime' : 'anime-list'
+  const { data, pagination } = await requirePayload<
+    { initial: string; animeList: { title: string; url: string }[] }[]
+  >(`${source.id}/${endpoint}`, { params: { initial, page } })
+
+  return {
+    items: (data[0]?.animeList ?? []).map((anime) => ({
+      title: anime.title,
+      slug: idFromUrl(anime.url),
+      otakudesu_url: anime.url,
+    })),
+    pagination,
+  }
+}
 export const getGenres = () => getActiveSource().getGenres()
 export const getAnimeByGenre = (genreSlug: string, page = 1) =>
   getActiveSource().getAnimeByGenre(genreSlug, page)
