@@ -1,5 +1,5 @@
 import { ChevronRight, Star } from 'lucide-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DetailSkeleton } from '../components/Skeletons'
 import WishlistButton from '../components/WishlistButton'
@@ -7,6 +7,7 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { useSource } from '../contexts/sourceContext'
 import { getDetail } from '../services/api'
+import { episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 import { rememberEpisodeAnime } from '../utils/episodeMap'
 import { recordRecommendations, saveAnimeMeta } from '../utils/watchHistory'
 
@@ -99,6 +100,18 @@ const DetailPage = () => {
         ]
       : undefined,
   })
+
+  const sortedEpisodeList = useMemo(() => {
+    return [...(anime?.episode_lists ?? [])].sort((left, right) => {
+      const leftNumber = episodeNumberValue(stripAnimeTitle(left.episode, anime?.title))
+      const rightNumber = episodeNumberValue(stripAnimeTitle(right.episode, anime?.title))
+
+      if (leftNumber === null && rightNumber === null) return 0
+      if (leftNumber === null) return 1
+      if (rightNumber === null) return -1
+      return rightNumber - leftNumber
+    })
+  }, [anime])
 
   if (loading) {
     return (
@@ -221,8 +234,8 @@ const DetailPage = () => {
                   Ganti sumber dari <span className="font-semibold">beranda</span> untuk
                   menonton.
                 </p>
-              ) : anime.episode_lists?.length ? (
-                anime.episode_lists.map((episode) => (
+              ) : sortedEpisodeList.length ? (
+                sortedEpisodeList.map((episode) => (
                   <Link
                     key={episode.slug ?? episode.episode}
                     to={`/watch/${episode.slug}`}
