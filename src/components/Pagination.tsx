@@ -23,7 +23,7 @@ const buildPageWindow = (current: number, last: number): (number | null)[] => {
 }
 
 const buttonClass =
-  'inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-200 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:enabled:hover:border-rose-800 dark:enabled:hover:text-rose-300'
+  'inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition enabled:hover:border-rose-300 enabled:hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:enabled:hover:border-rose-700 dark:enabled:hover:text-rose-300'
 
 /**
  * Navigasi halaman bersama untuk daftar yang datang dari API berhalaman.
@@ -69,7 +69,7 @@ const Pagination = ({ pagination, currentPage, onChange, busy = false }: Paginat
             aria-current={page === currentPage ? 'page' : undefined}
             className={
               page === currentPage
-                ? 'inline-flex h-9 min-w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 px-3 text-xs font-bold text-white shadow-sm'
+                ? 'inline-flex h-9 min-w-9 items-center justify-center rounded bg-rose-600 px-3 text-xs font-bold text-white'
                 : buttonClass
             }
           >

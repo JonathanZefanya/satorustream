@@ -83,7 +83,7 @@ const LoginPage = () => {
 
   return (
     <div className="container-app py-10">
-      <div className="mx-auto max-w-md surface-panel p-6 sm:p-7">
+      <div className="mx-auto max-w-md surface-panel p-6 sm:p-8">
         <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           {isSignup ? 'Buat akun' : 'Masuk'}
         </h1>

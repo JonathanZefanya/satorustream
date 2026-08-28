@@ -141,7 +141,7 @@ const OngoingPage = () => {
                 onClick={() => handleChangeTab(tab)}
                 className={`rounded-lg px-4 py-1.5 text-xs font-bold transition ${
                   isActive
-                    ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-sm'
+                    ? 'bg-rose-600 text-white'
                     : 'text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-300'
                 }`}
               >

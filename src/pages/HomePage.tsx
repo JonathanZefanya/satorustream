@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import ContinueWatchingCard from '../components/ContinueWatchingCard'
 import { CardSkeleton } from '../components/Skeletons'
@@ -27,6 +28,32 @@ type HomePayload = {
   ongoing: AnimeItem[]
   complete: AnimeItem[]
   recommendations: HomeRecommendationShelf | null
+}
+
+const RecommendationWidgetItem = ({ anime }: { anime: AnimeItem }) => {
+  if (!anime.slug) {
+    return null
+  }
+
+  return (
+    <Link
+      to={`/anime/${anime.slug}`}
+      className="flex items-center gap-3 border-b border-slate-200 pb-3 last:border-0 last:pb-0 dark:border-slate-800"
+    >
+      <img
+        src={anime.poster || 'https://placehold.co/96x128?text=No+Image'}
+        alt={anime.title || 'Anime poster'}
+        loading="lazy"
+        decoding="async"
+        width={48}
+        height={64}
+        className="h-16 w-12 shrink-0 rounded object-cover"
+      />
+      <span className="line-clamp-2 text-sm font-semibold leading-5 text-slate-800 dark:text-slate-200">
+        {anime.title || 'Untitled Anime'}
+      </span>
+    </Link>
+  )
 }
 
 const getGenreKey = (genre?: Genre): string => {
@@ -238,46 +265,9 @@ const HomePage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      {continueWatching.length > 0 && (
-        <section className="mb-10">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">Continue</p>
-              <h2 className="section-title">Lanjutkan tontonan</h2>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {continueWatching.map((entry) => (
-              <ContinueWatchingCard
-                key={`${entry.episodeSlug ?? entry.animeSlug ?? entry.watchedAt}`}
-                entry={entry}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {recommendedItems.length > 0 && (
-        <section className="mb-10">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">
-                {data?.recommendations?.sourceTitle
-                  ? `Because you watched ${data.recommendations.sourceTitle}`
-                  : 'Recommendations'}
-              </p>
-              <h2 className="section-title">Rekomendasi buat kamu</h2>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {recommendedItems.map((anime) => (
-              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <main className="min-w-0">
+          <section>
         <div className="mb-4 flex items-center justify-between">
           <h1 className="section-title">Ongoing Anime</h1>
           <button
@@ -309,7 +299,7 @@ const HomePage = () => {
             ))}
           </div>
         )}
-      </section>
+          </section>
 
       {/* Tidak semua sumber menyediakan daftar selesai — sembunyikan kalau kosong. */}
       {(loading || (data?.complete.length ?? 0) > 0) && (
@@ -328,6 +318,45 @@ const HomePage = () => {
           )}
         </section>
       )}
+        </main>
+
+        <aside className="space-y-6 lg:sticky lg:top-24">
+          {continueWatching.length > 0 && (
+            <section>
+              <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">Continue</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">Lanjutkan tontonan</h2>
+              </div>
+              <div className="space-y-3">
+                {continueWatching.map((entry) => (
+                  <ContinueWatchingCard
+                    key={`${entry.episodeSlug ?? entry.animeSlug ?? entry.watchedAt}`}
+                    entry={entry}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {recommendedItems.length > 0 && (
+            <section>
+              <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">
+                  {data?.recommendations?.sourceTitle
+                    ? `Karena kamu menonton ${data.recommendations.sourceTitle}`
+                    : 'Recommendations'}
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">Rekomendasi</h2>
+              </div>
+              <div className="space-y-3">
+                {recommendedItems.slice(0, 5).map((anime) => (
+                  <RecommendationWidgetItem key={anime.slug ?? anime.title} anime={anime} />
+                ))}
+              </div>
+            </section>
+          )}
+        </aside>
+      </div>
     </div>
   )
 }

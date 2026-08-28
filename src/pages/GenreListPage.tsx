@@ -131,7 +131,7 @@ const GenreListPage = () => {
       )}
 
       {!genresLoading && !genresError && (
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-5 dark:border-slate-800">
           {(genres ?? []).map((genre) => (
             <button
               key={genre.slug ?? genre.name}

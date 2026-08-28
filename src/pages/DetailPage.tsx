@@ -132,8 +132,13 @@ const DetailPage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      <div className="grid gap-6 md:grid-cols-[minmax(220px,280px)_1fr]">
-        <div>
+      <p className="mb-5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <Link to="/" className="transition hover:text-rose-600">Beranda</Link>
+        <span className="px-2 text-slate-300">/</span>
+        Detail anime
+      </p>
+      <div className="grid gap-6 md:grid-cols-[minmax(190px,240px)_1fr] lg:gap-8">
+        <div className="md:sticky md:top-24 md:self-start">
           <img
             src={anime.poster || 'https://placehold.co/640x900?text=No+Image'}
             alt={anime.title || 'Anime poster'}
@@ -142,7 +147,7 @@ const DetailPage = () => {
             fetchPriority="high"
             width={640}
             height={900}
-            className="aspect-[3/4] w-full rounded-2xl object-cover shadow-soft"
+            className="aspect-[3/4] w-full rounded-lg object-cover"
           />
 
           <WishlistButton
@@ -153,8 +158,8 @@ const DetailPage = () => {
           />
         </div>
 
-        <div className="surface-panel p-5 sm:p-6">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{anime.title}</h1>
+        <div className="surface-panel p-5 sm:p-7">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{anime.title}</h1>
           <p className="mt-1 text-sm text-slate-500">{anime.japanese_title || 'Japanese title unavailable'}</p>
 
           <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
@@ -199,7 +204,7 @@ const DetailPage = () => {
             <p className="mt-2 text-sm leading-7 text-slate-700">{anime.synopsis || 'Synopsis unavailable.'}</p>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-7 border-t border-slate-200 pt-5 dark:border-slate-800">
             <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
               {capabilities.downloadOnly ? 'Episodes (unduhan)' : 'Episodes'}
             </h2>

@@ -114,7 +114,7 @@ const SearchPage = () => {
 
       {!loading && !error && (data?.length ?? 0) > 0 && (
         <>
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Filters</span>
               {statusOptions.map((option) => (

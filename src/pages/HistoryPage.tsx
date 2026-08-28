@@ -141,7 +141,7 @@ const HistoryPage = () => {
       )}
 
       {user && loading && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="h-20 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
           ))}
@@ -172,7 +172,7 @@ const HistoryPage = () => {
             return (
               <article
                 key={group.key}
-                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 transition hover:border-rose-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-rose-800"
+                className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition hover:border-rose-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-rose-800"
               >
                 <img
                   src={entry.poster || 'https://placehold.co/120x160?text=?'}

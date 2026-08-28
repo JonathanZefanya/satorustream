@@ -115,7 +115,7 @@ const PwaPrompt = () => {
 
   if (updateReady) {
     return (
-      <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-soft dark:border-slate-700 dark:bg-slate-900 sm:inset-x-auto sm:right-4">
+      <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 sm:inset-x-auto sm:right-4">
         <div className="flex items-start gap-3">
           <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
           <div className="flex-1">
@@ -150,7 +150,7 @@ const PwaPrompt = () => {
   }
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-soft dark:border-slate-700 dark:bg-slate-900 sm:inset-x-auto sm:right-4">
+    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 sm:inset-x-auto sm:right-4">
       <div className="flex items-start gap-3">
         <img src="/favicon.svg" alt="" aria-hidden="true" className="mt-0.5 h-8 w-8" />
         <div className="flex-1">

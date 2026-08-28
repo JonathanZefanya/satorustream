@@ -211,7 +211,8 @@ const WatchPage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      <div className="surface-panel overflow-hidden p-3 sm:p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="surface-panel overflow-hidden p-2 sm:p-4">
         {downloadOnly ? (
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -354,7 +355,7 @@ const WatchPage = () => {
 
       {/* Daftar episode di bawah kotak pemutar: pindah episode tanpa harus
           kembali ke halaman detail, dan episode yang sedang diputar ditandai. */}
-      <section className="surface-panel mt-4 p-4 sm:p-5">
+        <section className="surface-panel p-4 sm:p-5 lg:sticky lg:top-24">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300">
@@ -429,7 +430,7 @@ const WatchPage = () => {
                       <span
                         className={`inline-flex h-7 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                           isActive
-                            ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white'
+                            ? 'bg-rose-600 text-white'
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
@@ -453,6 +454,7 @@ const WatchPage = () => {
           )}
         </div>
       </section>
+      </div>
     </div>
   )
 }

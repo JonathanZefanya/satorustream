@@ -233,7 +233,7 @@ const AnimeListPage = () => {
         </button>
       </div>
 
-      <div className="mb-4 overflow-x-auto pb-2">
+      <div className="mb-5 overflow-x-auto border-b border-slate-200 pb-3 dark:border-slate-800">
         <div className="flex min-w-max gap-2">
           {LETTERS.map((letter) => (
             <button

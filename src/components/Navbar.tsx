@@ -51,7 +51,7 @@ const buildMenuItems = (capabilities: SourceCapabilities) =>
 // Tombol ikon di sisi kanan header dibuat seragam supaya tinggi dan radiusnya
 // tidak berbeda-beda antar tombol.
 const controlClass =
-  'inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition hover:border-rose-300 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-rose-500/60 dark:hover:text-rose-300 dark:focus-visible:ring-rose-500/30'
+  'inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-rose-300 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-rose-500/60 dark:hover:text-rose-300 dark:focus-visible:ring-rose-500/30'
 
 interface SourcePickerProps {
   value: string
@@ -206,7 +206,7 @@ const SourcePicker = ({ value, options, onChange }: SourcePickerProps) => {
       </button>
 
       {isOpen && (
-        <div className="pop-in absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft dark:border-slate-800 dark:bg-slate-950">
+        <div className="pop-in absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg border border-slate-200 bg-white p-1.5 dark:border-slate-800 dark:bg-slate-950">
           <p className="px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
             Pilih sumber
           </p>
@@ -337,9 +337,9 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b bg-white/80 backdrop-blur-xl transition-shadow duration-200 dark:bg-slate-950/80 ${
+      className={`sticky top-0 z-40 border-b bg-white transition-shadow duration-200 dark:bg-slate-950 ${
         isScrolled
-          ? 'border-slate-200/80 shadow-soft dark:border-slate-800'
+          ? 'border-slate-200 dark:border-slate-800'
           : 'border-transparent dark:border-transparent'
       }`}
     >
@@ -352,7 +352,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             to="/"
             className="order-1 mr-auto flex shrink-0 items-center gap-2.5 text-slate-900 md:mr-0 dark:text-slate-100"
           >
-            <span className="rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 p-2 text-white shadow-sm">
+            <span className="rounded-lg bg-rose-600 p-2 text-white">
               <TvMinimalPlay className="h-5 w-5" />
             </span>
             <span className="flex flex-col leading-tight">
@@ -389,7 +389,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
                   }}
                   placeholder="Search anime..."
                   aria-label="Cari anime"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white/80 pl-10 pr-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-400/70 dark:focus:bg-slate-900 dark:focus:ring-rose-900/30"
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:ring-2 focus:ring-rose-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-400/70 dark:focus:ring-rose-900/30"
                 />
                 <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 lg:block dark:border-slate-700 dark:text-slate-500">
                   /
@@ -397,7 +397,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
               </label>
 
               {showSuggestions && (
-                <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-950">
+                <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                   <ul className="divide-y divide-slate-100 text-sm text-slate-700 dark:divide-slate-800 dark:text-slate-200">
                     {suggestionItems.map((anime) => (
                       <li key={anime.slug ?? anime.title}>
@@ -480,7 +480,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
               ) : (
                 <Link
                   to="/login"
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:from-orange-400 hover:to-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
                 >
                   <LogIn className="h-4 w-4" />
                   <span className="hidden sm:inline">Masuk</span>
@@ -489,7 +489,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
           </div>
         </div>
 
-        <nav className="mt-3 -mx-1 edge-fade-x overflow-x-auto no-scrollbar" aria-label="Main navigation">
+        <nav className="mt-3 -mx-1 overflow-x-auto no-scrollbar" aria-label="Main navigation">
           <div className="flex min-w-max items-center gap-1.5 px-1">
             {menuItems.map((item) => {
               const Icon = item.icon
@@ -500,9 +500,9 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:focus-visible:ring-rose-500/30 ${
+                    `inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:focus-visible:ring-rose-500/30 ${
                       isActive
-                        ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-sm'
+                        ? 'bg-rose-600 text-white'
                         : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300'
                     }`
                   }

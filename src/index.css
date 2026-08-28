@@ -7,8 +7,8 @@
 @layer base {
   :root {
     color-scheme: light;
-    --brand-primary: #f97316;
-    --brand-secondary: #fb7185;
+    --brand-primary: #e4572e;
+    --brand-secondary: #c2412d;
     --brand-ink: #0f172a;
   }
 
@@ -25,23 +25,13 @@
   }
 
   body {
-    @apply min-h-screen bg-slate-50 text-slate-900 antialiased;
+    @apply min-h-screen bg-[#f6f6f4] text-slate-900 antialiased;
     font-family: 'Manrope', sans-serif;
     transition: background-color 180ms ease, color 180ms ease;
-    background-image:
-      radial-gradient(circle at 12% 12%, rgba(251, 113, 133, 0.25), transparent 34%),
-      radial-gradient(circle at 88% 10%, rgba(34, 211, 238, 0.2), transparent 36%),
-      radial-gradient(circle at 60% 90%, rgba(249, 115, 22, 0.2), transparent 38%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   }
 
   html.dark body {
     @apply bg-slate-950 text-slate-100;
-    background-image:
-      radial-gradient(circle at 12% 12%, rgba(249, 115, 22, 0.2), transparent 34%),
-      radial-gradient(circle at 80% 8%, rgba(56, 189, 248, 0.18), transparent 34%),
-      radial-gradient(circle at 60% 90%, rgba(244, 63, 94, 0.2), transparent 38%),
-      linear-gradient(180deg, #020617 0%, #0b1220 100%);
   }
 
   #root {
@@ -55,7 +45,7 @@
   }
 
   .section-title {
-    @apply text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl;
+    @apply text-xl font-bold tracking-tight text-slate-900 sm:text-2xl;
     font-family: 'Space Grotesk', sans-serif;
   }
 
@@ -64,15 +54,23 @@
   }
 
   .surface-panel {
-    @apply rounded-2xl border border-slate-200 bg-white/95 shadow-soft;
+    @apply rounded-lg border border-slate-200 bg-white;
   }
 
   html.dark .surface-panel {
-    @apply border-slate-700 bg-slate-900/95;
+    @apply border-slate-700 bg-slate-900;
   }
 }
 
 @layer utilities {
+  .rounded-2xl {
+    border-radius: 0.5rem !important;
+  }
+
+  .shadow-soft {
+    box-shadow: none !important;
+  }
+
   html.dark .bg-white {
     background-color: rgb(15 23 42 / 1) !important;
   }
@@ -141,33 +139,7 @@
     display: none;
   }
 
-  /* Tepi kiri-kanan memudar sebagai petunjuk bahwa isinya masih bisa digeser. */
-  .edge-fade-x {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      #000 18px,
-      #000 calc(100% - 18px),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      #000 18px,
-      #000 calc(100% - 18px),
-      transparent 100%
-    );
-  }
-
-  @media (min-width: 1024px) {
-    .edge-fade-x {
-      -webkit-mask-image: none;
-      mask-image: none;
-    }
-  }
-
-  /* Panel melayang (dropdown sumber) muncul dengan gerakan singkat, dan
-     langsung diam bila pengguna meminta animasi dikurangi. */
+  /* Panel dropdown muncul dengan gerakan singkat, dan diam untuk reduced motion. */
   @keyframes pop-in {
     from {
       opacity: 0;

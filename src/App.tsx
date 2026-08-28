@@ -63,7 +63,6 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none fixed inset-x-0 top-[-180px] h-[300px] bg-gradient-to-b from-rose-100/60 to-transparent dark:from-rose-900/25" />
       <Navbar theme={theme} onToggleTheme={onToggleTheme} />
       <main>
         {/* `key` memaksa halaman dipasang ulang saat sumber berganti, sehingga

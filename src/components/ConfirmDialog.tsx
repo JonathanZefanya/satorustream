@@ -118,7 +118,7 @@ const ConfirmDialog = ({
         }
       }}
     >
-      <div className="pop-in absolute inset-0 bg-slate-950/60 backdrop-blur-sm" aria-hidden="true" />
+      <div className="pop-in absolute inset-0 bg-slate-950/60" aria-hidden="true" />
 
       <div
         ref={panelRef}
@@ -126,7 +126,7 @@ const ConfirmDialog = ({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby={description ? 'confirm-dialog-description' : undefined}
-        className="pop-in relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-soft dark:border-slate-800 dark:bg-slate-950"
+        className="pop-in relative w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
       >
         <div className="flex items-start gap-3">
           <span
@@ -173,8 +173,8 @@ const ConfirmDialog = ({
             disabled={busy}
             className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-70 ${
               isDanger
-                ? 'bg-gradient-to-br from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500'
-                : 'bg-gradient-to-br from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400'
+                ? 'bg-rose-600 hover:bg-rose-700'
+                : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
             }`}
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
