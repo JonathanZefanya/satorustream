@@ -30,21 +30,33 @@ export const getOngoingPage = (page = 1) => getActiveSource().getOngoingPage(pag
 export const getCompletePage = (page = 1) => getActiveSource().getCompletePage(page)
 export const getSchedule = () => getActiveSource().getSchedule()
 export const getAnimeCollections = () => getActiveSource().getAnimeCollections()
+const animeListPageCache = new Map<string, Promise<PagedItems<AnimeItem>>>()
+
 export const getAnimeListPage = async (initial: string, page = 1): Promise<PagedItems<AnimeItem>> => {
   const source = getActiveSource()
+  const cacheKey = `${source.id}:${initial}:${page}`
+  const cached = animeListPageCache.get(cacheKey)
+  if (cached) return cached
+
   const endpoint = source.id === 'otakudesu' ? 'anime' : 'anime-list'
-  const { data, pagination } = await requirePayload<
+  const request = requirePayload<
     { initial: string; animeList: { title: string; url: string }[] }[]
   >(`${source.id}/${endpoint}`, { params: { initial, page } })
+    .then(({ data, pagination }) => ({
+      items: (data[0]?.animeList ?? []).map((anime) => ({
+        title: anime.title,
+        slug: idFromUrl(anime.url),
+        otakudesu_url: anime.url,
+      })),
+      pagination,
+    }))
+    .catch((error) => {
+      animeListPageCache.delete(cacheKey)
+      throw error
+    })
 
-  return {
-    items: (data[0]?.animeList ?? []).map((anime) => ({
-      title: anime.title,
-      slug: idFromUrl(anime.url),
-      otakudesu_url: anime.url,
-    })),
-    pagination,
-  }
+  animeListPageCache.set(cacheKey, request)
+  return request
 }
 export const getGenres = () => getActiveSource().getGenres()
 export const getAnimeByGenre = (genreSlug: string, page = 1) =>
