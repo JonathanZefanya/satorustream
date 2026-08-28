@@ -25,7 +25,13 @@ const DetailPage = () => {
     }
 
     const animeSlug = endpoint
-    saveAnimeMeta({ slug: animeSlug, title: anime.title, poster: anime.poster, genres: anime.genres })
+    saveAnimeMeta({
+      slug: animeSlug,
+      title: anime.title,
+      poster: anime.poster,
+      genres: anime.genres,
+      episode_count: anime.episode_count || String(anime.episode_lists?.length || ''),
+    })
     rememberEpisodeAnime(
       animeSlug,
       (anime.episode_lists ?? []).map((episode) => episode.slug),

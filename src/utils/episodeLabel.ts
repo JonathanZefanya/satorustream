@@ -25,3 +25,13 @@ export const episodeNumberFrom = (label?: string): string | null => {
 
   return match?.[1] ?? null
 }
+
+export const episodeNumberValue = (label?: string): number | null => {
+  const value = episodeNumberFrom(label)
+  if (value === null) {
+    return null
+  }
+
+  const number = Number.parseFloat(value)
+  return Number.isFinite(number) ? number : null
+}

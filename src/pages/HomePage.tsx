@@ -15,6 +15,7 @@ import {
   getWatchHistory,
   type RecommendationShelf,
 } from '../utils/watchHistory'
+import { episodeNumberValue } from '../utils/episodeLabel'
 
 const RECOMMENDATION_LIMIT = 12
 const MAX_RECOMMENDATION_GENRES = 3
@@ -258,9 +259,26 @@ const HomePage = () => {
   }
 
   return Array.from(latestByAnime.values())
+    .filter((entry) => {
+      const meta = getAnimeMeta(entry.animeSlug)
+      const watchedEpisode = episodeNumberValue(entry.episodeLabel)
+      const catalogItem = [...(data?.ongoing ?? []), ...(data?.complete ?? [])].find(
+        (anime) => anime.slug === entry.animeSlug,
+      )
+      const totalEpisodes = episodeNumberValue(
+        meta?.episodeCount ?? catalogItem?.episode_count ?? catalogItem?.current_episode,
+      )
+
+      return !(
+        watchedEpisode !== null &&
+        totalEpisodes !== null &&
+        totalEpisodes > 0 &&
+        watchedEpisode >= totalEpisodes
+      )
+    })
     .sort((a, b) => b.watchedAt - a.watchedAt) // terbaru dulu
     .slice(0, 6)
-}, [user])
+}, [data, user])
   const recommendedItems = data?.recommendations?.items ?? []
 
   return (

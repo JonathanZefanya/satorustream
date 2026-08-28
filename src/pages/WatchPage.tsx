@@ -9,9 +9,9 @@ import { useSource } from '../contexts/sourceContext'
 import DownloadList from '../components/DownloadList'
 import { recordHistory } from '../services/userLibrary'
 import type { StreamServer } from '../types/anime'
-import { episodeNumberFrom, stripAnimeTitle } from '../utils/episodeLabel'
+import { episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
-import { getAnimeMeta } from '../utils/watchHistory'
+import { getAnimeMeta, saveAnimeMeta } from '../utils/watchHistory'
 
 const DEFAULT_SERVER_KEY = 'default'
 
@@ -81,7 +81,17 @@ const WatchPage = () => {
     error: episodeListError,
   } = useAsyncData(fetchEpisodeList, { enabled: Boolean(animeSlug) })
 
-  const episodeList = useMemo(() => animeDetail?.episode_lists ?? [], [animeDetail])
+  const episodeList = useMemo(() => {
+    return [...(animeDetail?.episode_lists ?? [])].sort((left, right) => {
+      const leftNumber = episodeNumberValue(stripAnimeTitle(left.episode, animeDetail?.title))
+      const rightNumber = episodeNumberValue(stripAnimeTitle(right.episode, animeDetail?.title))
+
+      if (leftNumber === null && rightNumber === null) return 0
+      if (leftNumber === null) return 1
+      if (rightNumber === null) return -1
+      return rightNumber - leftNumber
+    })
+  }, [animeDetail])
   const episodeListRef = useRef<HTMLDivElement>(null)
 
   // Daftarnya panjang dan episode yang diputar bisa ada di tengah; posisinya
@@ -102,6 +112,17 @@ const WatchPage = () => {
   // Judul anime tidak ikut di respons episode, jadi diambil dari meta yang
   // sudah disimpan saat halaman detail dibuka.
   const animeMeta = getAnimeMeta(animeSlug)
+  useEffect(() => {
+    if (!animeDetail || !animeSlug) return
+
+    saveAnimeMeta({
+      slug: animeSlug,
+      title: animeDetail.title,
+      poster: animeDetail.poster,
+      genres: animeDetail.genres,
+      episode_count: animeDetail.episode_count || String(animeDetail.episode_lists?.length || ''),
+    })
+  }, [animeDetail, animeSlug])
   const episodeLabel = data?.episode?.trim() || 'Episode'
   const canonicalPath = `/watch/${endpoint}`
 
@@ -409,7 +430,9 @@ const WatchPage = () => {
                   stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
                   episode.episode ||
                   'Episode'
-                const number = episodeNumberFrom(episode.episode) ?? String(episodeList.length - index)
+                const number =
+                  episodeNumberFrom(stripAnimeTitle(episode.episode, animeDetail?.title)) ??
+                  String(episodeList.length - index)
 
                 if (!episode.slug) {
                   return null

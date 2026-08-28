@@ -16,6 +16,7 @@ type AnimeMeta = {
   title?: string
   poster?: string
   genres?: AnimeItem['genres']
+  episodeCount?: string
   updatedAt: number
 }
 
@@ -38,7 +39,9 @@ export type RecommendationShelf = {
   items: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>[]
 }
 
-export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres'>) => {
+export const saveAnimeMeta = (
+  anime: Pick<AnimeItem, 'slug' | 'title' | 'poster' | 'genres' | 'episode_count'>,
+) => {
   if (!anime.slug) {
     return
   }
@@ -49,6 +52,7 @@ export const saveAnimeMeta = (anime: Pick<AnimeItem, 'slug' | 'title' | 'poster'
     title: anime.title,
     poster: anime.poster,
     genres: anime.genres,
+    episodeCount: anime.episode_count,
     updatedAt: Date.now(),
   }
 
