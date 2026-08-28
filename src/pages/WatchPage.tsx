@@ -457,7 +457,7 @@ const WatchPage = () => {
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
-                        {isActive ? <Play className="h-3.5 w-3.5" /> : number}
+                        {isActive ? <Play className="h-3.5 w-3.5" /> : "Ş"}
                       </span>
 
                       <span className="line-clamp-1 flex-1">{label}</span>
