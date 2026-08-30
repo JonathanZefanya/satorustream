@@ -9,7 +9,10 @@ import { useSource } from '../contexts/sourceContext'
 import DownloadList from '../components/DownloadList'
 import { recordHistory } from '../services/userLibrary'
 import type { StreamServer } from '../types/anime'
-import { episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
+// gunakan ini jika ingin menampilkan nomor episode di daftar episode
+// import { /episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
+// gunakan ini jika ingin menampilkan nomor episode di daftar episode
+import {  episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
 import { getAnimeMeta, saveAnimeMeta } from '../utils/watchHistory'
 
@@ -430,9 +433,10 @@ const WatchPage = () => {
                   stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
                   episode.episode ||
                   'Episode'
-                const number =
-                  episodeNumberFrom(stripAnimeTitle(episode.episode, animeDetail?.title)) ??
-                  String(episodeList.length - index)
+                  // gunakan ini jika ingin menampilkan nomor episode di daftar episode
+                // const number =
+                //   episodeNumberFrom(stripAnimeTitle(episode.episode, animeDetail?.title)) ??
+                //   String(episodeList.length - index)
 
                 if (!episode.slug) {
                   return null
@@ -458,6 +462,8 @@ const WatchPage = () => {
                         }`}
                       >
                         {isActive ? <Play className="h-3.5 w-3.5" /> : "Ş"}
+                        {/* Gunakan ini jika ingin menampilkan nomor episode di daftar episode */}
+                        {/* {isActive ? <Play className="h-3.5 w-3.5" /> : number} */}
                       </span>
 
                       <span className="line-clamp-1 flex-1">{label}</span>
