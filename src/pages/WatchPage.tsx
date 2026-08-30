@@ -427,16 +427,28 @@ const WatchPage = () => {
             </p>
           ) : (
             <ol className="space-y-1.5">
-              {episodeList.map((episode, index) => {
+              {/* Gunakan ini jika ingin menampilkan daftar episode dengan number */}
+              {/* {episodeList.map((episode, index) => {
                 const isActive = Boolean(episode.slug) && episode.slug === endpoint
                 const label =
                   stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
                   episode.episode ||
                   'Episode'
-                  // gunakan ini jika ingin menampilkan nomor episode di daftar episode
-                // const number =
-                //   episodeNumberFrom(stripAnimeTitle(episode.episode, animeDetail?.title)) ??
-                //   String(episodeList.length - index)
+                const number =
+                  episodeNumberFrom(stripAnimeTitle(episode.episode, animeDetail?.title)) ??
+                  String(episodeList.length - index)
+
+                if (!episode.slug) {
+                  return null
+                } */}
+
+                {/* Gunakan ini jika ingin menampilkan daftar episode dengan simbol */}
+                {episodeList.map((episode) => {
+                const isActive = Boolean(episode.slug) && episode.slug === endpoint
+                const label =
+                  stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
+                  episode.episode ||
+                  'Episode'
 
                 if (!episode.slug) {
                   return null
