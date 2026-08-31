@@ -10,9 +10,9 @@ import DownloadList from '../components/DownloadList'
 import { recordHistory } from '../services/userLibrary'
 import type { StreamServer } from '../types/anime'
 // gunakan ini jika ingin menampilkan nomor episode di daftar episode
-// import { /episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
+import { episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 // gunakan ini jika ingin menampilkan nomor episode di daftar episode
-import {  episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
+// import {  episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
 import { getAnimeMeta, saveAnimeMeta } from '../utils/watchHistory'
 
@@ -428,7 +428,7 @@ const WatchPage = () => {
           ) : (
             <ol className="space-y-1.5">
               {/* Gunakan ini jika ingin menampilkan daftar episode dengan number */}
-              {/* {episodeList.map((episode, index) => {
+              {episodeList.map((episode, index) => {
                 const isActive = Boolean(episode.slug) && episode.slug === endpoint
                 const label =
                   stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
@@ -440,19 +440,19 @@ const WatchPage = () => {
 
                 if (!episode.slug) {
                   return null
-                } */}
+                }
 
                 {/* Gunakan ini jika ingin menampilkan daftar episode dengan simbol */}
-                {episodeList.map((episode) => {
-                const isActive = Boolean(episode.slug) && episode.slug === endpoint
-                const label =
-                  stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
-                  episode.episode ||
-                  'Episode'
+                // {episodeList.map((episode) => {
+                // const isActive = Boolean(episode.slug) && episode.slug === endpoint
+                // const label =
+                //   stripAnimeTitle(episode.episode, animeDetail?.title || animeMeta?.title) ||
+                //   episode.episode ||
+                //   'Episode'
 
-                if (!episode.slug) {
-                  return null
-                }
+                // if (!episode.slug) {
+                //   return null
+                // }
 
                 return (
                   <li key={episode.slug}>
@@ -473,9 +473,9 @@ const WatchPage = () => {
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
-                        {isActive ? <Play className="h-3.5 w-3.5" /> : "Ş"}
+                        {/* {isActive ? <Play className="h-3.5 w-3.5" /> : "Ş"} */}
                         {/* Gunakan ini jika ingin menampilkan nomor episode di daftar episode */}
-                        {/* {isActive ? <Play className="h-3.5 w-3.5" /> : number} */}
+                        {isActive ? <Play className="h-3.5 w-3.5" /> : number}
                       </span>
 
                       <span className="line-clamp-1 flex-1">{label}</span>
