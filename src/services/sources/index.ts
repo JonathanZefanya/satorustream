@@ -4,6 +4,7 @@ import { nimegamiAdapter } from './nimegami'
 import { oploverzAdapter } from './oploverz'
 import { otakudesuAdapter } from './otakudesu'
 import { ylnimeAdapter } from './ylnime'
+import { nontonanimeidAdapter } from './nontonanimeid'
 import type { SourceAdapter } from './types'
 
 export const SOURCES: Record<string, SourceAdapter> = {
@@ -13,6 +14,7 @@ export const SOURCES: Record<string, SourceAdapter> = {
   kuramanime: kuramanimeAdapter,
   doronime: doronimeAdapter,
   ylnime: ylnimeAdapter,
+  nontonanimeid: nontonanimeidAdapter,
 }
 
 export const SOURCE_IDS = Object.keys(SOURCES)
@@ -33,8 +35,6 @@ export const SOURCE_IDS = Object.keys(SOURCES)
  * residensial.
  */
 export const DEV_ONLY_SOURCE_IDS = ['kuramanime', 'doronime']
-
-/** Sumber yang sedang down; dinonaktifkan di semua build sampai pulih. */
 export const DISABLED_SOURCE_IDS = ['nimegami']
 
 const isSelectable = (id: string): boolean => {
