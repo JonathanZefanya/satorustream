@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import AnimeCard from '../components/AnimeCard'
-import { CardSkeleton } from '../components/Skeletons'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getAnimeListPage } from '../services/api'
@@ -108,9 +106,13 @@ const AnimeListPage = () => {
       </div>
 
       {loading && !pageData && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          <CardSkeleton count={12} />
-        </div>
+        <ul className="grid gap-x-6 sm:grid-cols-2">
+          {Array.from({ length: 18 }, (_, index) => (
+            <li key={index} className="border-b border-slate-200 px-1 py-3 dark:border-slate-800">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            </li>
+          ))}
+        </ul>
       )}
 
       {!loading && error && (
@@ -127,11 +129,39 @@ const AnimeListPage = () => {
       )}
 
       {!error && visibleAnime.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {visibleAnime.map((anime) => (
-            <AnimeCard key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`} anime={anime} />
-          ))}
-        </div>
+        <ul className="grid gap-x-6 sm:grid-cols-2">
+          {visibleAnime.map((anime) => {
+            const meta = anime.current_episode ?? anime.status ?? (anime.episode_count ? `Ep ${anime.episode_count}` : null)
+            const content = (
+              <>
+                <span className="min-w-0 flex-1 truncate">{anime.title || 'Untitled Anime'}</span>
+                {meta && (
+                  <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    {meta}
+                  </span>
+                )}
+              </>
+            )
+            const rowClass =
+              'flex items-center gap-3 border-b border-slate-200 px-1 py-2.5 text-sm font-medium text-slate-800 dark:border-slate-800 dark:text-slate-200'
+
+            return (
+              <li key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`}>
+                {anime.slug ? (
+                  <Link
+                    to={`/anime/${anime.slug}`}
+                    title={anime.title}
+                    className={`${rowClass} transition hover:text-rose-600 dark:hover:text-rose-400`}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div className={rowClass}>{content}</div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
       )}
 
       {!loading && !error && pageCount > 1 && (
