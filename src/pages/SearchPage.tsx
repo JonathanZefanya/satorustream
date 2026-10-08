@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
+import Pagination from '../components/Pagination'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { searchAnime } from '../services/api'
 
+const PAGE_SIZE = 24
+
 const SearchPage = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q')?.trim() ?? ''
+  const requestedPage = Math.max(1, Number.parseInt(searchParams.get('page') ?? '1', 10) || 1)
 
   useSeo({
     title: query ? `Hasil pencarian "${query}"` : 'Cari Anime Sub Indo',
@@ -70,6 +74,26 @@ const SearchPage = () => {
     return items
   }, [data, seasonFilter, statusFilter])
 
+  const pageCount = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE))
+  const currentPage = Math.min(requestedPage, pageCount)
+  const pageStart = (currentPage - 1) * PAGE_SIZE
+  const pagedResults = filteredResults.slice(pageStart, pageStart + PAGE_SIZE)
+
+  const changePage = (page: number) => {
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params)
+      if (page > 1) next.set('page', String(page))
+      else next.delete('page')
+      return next
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const changeFilter = (apply: () => void) => {
+    apply()
+    if (requestedPage > 1) changePage(1)
+  }
+
   if (!query) {
     return (
       <div className="container-app py-8">
@@ -121,7 +145,7 @@ const SearchPage = () => {
                 <button
                   key={`status-${option}`}
                   type="button"
-                  onClick={() => setStatusFilter(option)}
+                  onClick={() => changeFilter(() => setStatusFilter(option))}
                   className={`rounded-full border px-3 py-1 transition ${
                     statusFilter === option
                       ? 'border-rose-300 bg-rose-50 text-rose-600'
@@ -137,7 +161,7 @@ const SearchPage = () => {
                     <button
                       key={`season-${option}`}
                       type="button"
-                      onClick={() => setSeasonFilter(option)}
+                      onClick={() => changeFilter(() => setSeasonFilter(option))}
                       className={`rounded-full border px-3 py-1 transition ${
                         seasonFilter === option
                           ? 'border-rose-300 bg-rose-50 text-rose-600'
@@ -151,7 +175,9 @@ const SearchPage = () => {
               )}
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              Showing {filteredResults.length} of {data?.length ?? 0} titles.
+              Showing {pagedResults.length ? pageStart + 1 : 0}-{pageStart + pagedResults.length} of{' '}
+              {filteredResults.length} titles
+              {filteredResults.length !== (data?.length ?? 0) && ` (${data?.length ?? 0} total)`}.
             </p>
           </div>
 
@@ -160,11 +186,25 @@ const SearchPage = () => {
               Tidak ada hasil sesuai filter yang dipilih.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {filteredResults.map((anime) => (
-                <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {pagedResults.map((anime) => (
+                  <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+                ))}
+              </div>
+              <Pagination
+                pagination={{
+                  current_page: currentPage,
+                  last_visible_page: pageCount,
+                  has_next_page: currentPage < pageCount,
+                  next_page: currentPage < pageCount ? currentPage + 1 : null,
+                  has_previous_page: currentPage > 1,
+                  previous_page: currentPage > 1 ? currentPage - 1 : null,
+                }}
+                currentPage={currentPage}
+                onChange={changePage}
+              />
+            </>
           )}
         </>
       )}
