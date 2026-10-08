@@ -187,6 +187,7 @@ const WatchPage = () => {
     (selectedServerKey === DEFAULT_SERVER_KEY
       ? data?.iframe_url
       : serverUrls[selectedServerKey]) || null
+  const isDirectVideo = Boolean(activePlayerUrl && /\.(mp4|webm)(\?|#|$)/i.test(activePlayerUrl))
 
   const activeSourceLabel =
     selectedServerKey === DEFAULT_SERVER_KEY
@@ -297,7 +298,17 @@ const WatchPage = () => {
         </div>
         )}
 
-        {downloadOnly ? null : activePlayerUrl ? (
+        {downloadOnly ? null : activePlayerUrl && isDirectVideo ? (
+          <video
+            key={activePlayerUrl}
+            src={activePlayerUrl}
+            title={data.episode}
+            controls
+            playsInline
+            preload="metadata"
+            className="w-full aspect-video rounded-xl bg-slate-950"
+          />
+        ) : activePlayerUrl ? (
           <iframe
             src={activePlayerUrl}
             title={data.episode}
