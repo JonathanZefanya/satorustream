@@ -1,4 +1,4 @@
-import { Layers, Play, Trash2 } from 'lucide-react'
+import { CheckSquare, Layers, Play, Trash2, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -24,6 +24,9 @@ const formatWatchedAt = (timestamp: number): string => {
     minute: '2-digit',
   })
 }
+
+const toolbarButtonClass =
+  'inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
 
 const formatEpisodeLabel = (entry: HistoryEntry): string =>
   stripAnimeTitle(entry.episodeLabel, entry.title) || entry.episodeSlug
@@ -75,7 +78,9 @@ const HistoryPage = () => {
     noIndex: true,
   })
 
-  const [pendingRemoval, setPendingRemoval] = useState<HistoryGroup | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<HistoryGroup[] | null>(null)
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [removing, setRemoving] = useState(false)
   const [removalError, setRemovalError] = useState<string | null>(null)
 
@@ -86,26 +91,49 @@ const HistoryPage = () => {
 
   const entries = useMemo(() => data ?? [], [data])
   const groups = useMemo(() => groupByAnime(entries), [entries])
+  const selectedGroups = useMemo(() => groups.filter((group) => selected.has(group.key)), [groups, selected])
+  const allSelected = groups.length > 0 && selectedGroups.length === groups.length
+
+  const toggleSelected = (key: string) => {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const exitSelecting = () => {
+    setSelecting(false)
+    setSelected(new Set())
+  }
 
   const handleConfirmRemove = async () => {
     if (!pendingRemoval) {
       return
     }
 
-    const { latest, episodeSlugs } = pendingRemoval
     setRemoving(true)
     setRemovalError(null)
 
-    try {
-      await clearHistoryEntries(episodeSlugs, user?.id, latest.sourceId)
+    const bySource = new Map<string, string[]>()
+    pendingRemoval.forEach(({ latest, episodeSlugs }) => {
+      bySource.set(latest.sourceId, [...(bySource.get(latest.sourceId) ?? []), ...episodeSlugs])
+    })
 
-      const removed = new Set(episodeSlugs)
+    try {
+      await Promise.all(
+        [...bySource].map(([source, slugs]) => clearHistoryEntries(slugs, user?.id, source)),
+      )
+
+      const removed = new Set(
+        [...bySource].flatMap(([source, slugs]) => slugs.map((slug) => `${source}::${slug}`)),
+      )
       setData((current) =>
-        (current ?? []).filter(
-          (item) => !(item.sourceId === latest.sourceId && removed.has(item.episodeSlug)),
-        ),
+        (current ?? []).filter((item) => !removed.has(`${item.sourceId}::${item.episodeSlug}`)),
       )
       setPendingRemoval(null)
+      exitSelecting()
     } catch (err) {
       setRemovalError(err instanceof Error ? err.message : 'Gagal menghapus riwayat.')
     } finally {
@@ -123,13 +151,46 @@ const HistoryPage = () => {
           </p>
         </div>
         {user && (
-        <button
-          type="button"
-          onClick={() => void reload()}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-        >
-          Refresh
-        </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {selecting ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSelected(allSelected ? new Set() : new Set(groups.map((group) => group.key)))}
+                  className={toolbarButtonClass}
+                >
+                  {allSelected ? 'Batal pilih semua' : 'Pilih semua'}
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedGroups.length === 0}
+                  onClick={() => {
+                    setRemovalError(null)
+                    setPendingRemoval(selectedGroups)
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Hapus ({selectedGroups.length})
+                </button>
+                <button type="button" onClick={exitSelecting} aria-label="Batal memilih" className={toolbarButtonClass}>
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                {groups.length > 0 && (
+                  <button type="button" onClick={() => setSelecting(true)} className={toolbarButtonClass}>
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    Pilih
+                  </button>
+                )}
+                <button type="button" onClick={() => void reload()} className={toolbarButtonClass}>
+                  Refresh
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -168,12 +229,30 @@ const HistoryPage = () => {
             const sameSource = entry.sourceId === sourceId
             const playable = sameSource && capabilities.streaming && Boolean(entry.episodeSlug)
             const watchedCount = group.episodeSlugs.length
+            const isSelected = selected.has(group.key)
 
             return (
               <article
                 key={group.key}
-                className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition hover:border-rose-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-rose-800"
+                onClick={selecting ? () => toggleSelected(group.key) : undefined}
+                className={`flex items-center gap-3 rounded-lg border bg-white p-3 transition dark:bg-slate-900 ${
+                  selecting ? 'cursor-pointer select-none' : ''
+                } ${
+                  isSelected
+                    ? 'border-rose-300 dark:border-rose-700'
+                    : 'border-slate-200 hover:border-rose-200 dark:border-slate-700 dark:hover:border-rose-800'
+                }`}
               >
+                {selecting && (
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelected(group.key)}
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={`Pilih ${entry.title || 'anime ini'}`}
+                    className="h-4 w-4 shrink-0 accent-rose-600"
+                  />
+                )}
                 <img
                   src={entry.poster || 'https://placehold.co/120x160?text=?'}
                   alt=""
@@ -200,6 +279,7 @@ const HistoryPage = () => {
                   </div>
                 </div>
 
+                {!selecting && (
                 <div className="flex shrink-0 items-center gap-2">
                   {playable && (
                     <Link
@@ -214,7 +294,7 @@ const HistoryPage = () => {
                     type="button"
                     onClick={() => {
                       setRemovalError(null)
-                      setPendingRemoval(group)
+                      setPendingRemoval([group])
                     }}
                     aria-label={`Hapus riwayat ${entry.title || 'anime ini'}`}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:hover:border-rose-800 dark:hover:bg-rose-950/40"
@@ -222,6 +302,7 @@ const HistoryPage = () => {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
+                )}
               </article>
             )
           })}
@@ -234,13 +315,24 @@ const HistoryPage = () => {
         description={
           pendingRemoval ? (
             <>
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {pendingRemoval.latest.title || 'Anime ini'}
-              </span>{' '}
-              akan dihapus dari riwayat
-              {pendingRemoval.episodeSlugs.length > 1
-                ? ` beserta ${pendingRemoval.episodeSlugs.length} episode yang tercatat`
-                : ''}
+              {pendingRemoval.length === 1 ? (
+                <>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {pendingRemoval[0].latest.title || 'Anime ini'}
+                  </span>{' '}
+                  akan dihapus dari riwayat
+                  {pendingRemoval[0].episodeSlugs.length > 1
+                    ? ` beserta ${pendingRemoval[0].episodeSlugs.length} episode yang tercatat`
+                    : ''}
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {pendingRemoval.length} anime
+                  </span>{' '}
+                  akan dihapus dari riwayat beserta semua episode yang tercatat
+                </>
+              )}
               . Tindakan ini tidak bisa dibatalkan.
               {removalError ? (
                 <span className="mt-2 block text-rose-600 dark:text-rose-400">{removalError}</span>
