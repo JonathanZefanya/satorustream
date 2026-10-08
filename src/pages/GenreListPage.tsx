@@ -1,192 +1,73 @@
-import { useCallback, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import AnimeCard from '../components/AnimeCard'
-import Pagination from '../components/Pagination'
-import { CardSkeleton } from '../components/Skeletons'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
-import { getAnimeByGenre, getGenres } from '../services/api'
-
-/** Mengubah slug genre ("slice-of-life") menjadi label judul ("Slice Of Life"). */
-const toGenreLabel = (slug: string): string => {
-  return slug
-    .split('-')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-}
+import { getGenres } from '../services/api'
+import { genrePath } from '../utils/routes'
 
 const GenreListPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const selectedGenre = searchParams.get('genre') ?? ''
-  const pageParam = Number(searchParams.get('page') ?? '1')
-  const currentPage = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
-
-  const genreLabel = selectedGenre ? toGenreLabel(selectedGenre) : ''
+  const [searchParams] = useSearchParams()
+  const legacyGenre = searchParams.get('genre')
 
   useSeo({
-    title: genreLabel
-      ? `Anime Genre ${genreLabel} Sub Indo${currentPage > 1 ? ` — Halaman ${currentPage}` : ''}`
-      : 'Genre Anime — Jelajahi Berdasarkan Kategori',
-    description: genreLabel
-      ? `Kumpulan anime genre ${genreLabel} subtitle Indonesia. Telusuri judul terbaik bergenre ${genreLabel} dan tonton gratis di SatoruStream.`
-      : 'Jelajahi anime berdasarkan genre: action, romance, isekai, comedy, dan lainnya. Semua dengan subtitle Indonesia.',
-    canonicalPath: selectedGenre
-      ? `/genres?genre=${selectedGenre}${currentPage > 1 ? `&page=${currentPage}` : ''}`
-      : '/genres',
-    keywords: genreLabel
-      ? [`anime ${genreLabel}`, `anime genre ${genreLabel}`, `${genreLabel} sub indo`]
-      : ['genre anime', 'anime berdasarkan genre'],
+    title: 'Genre Anime — Jelajahi Berdasarkan Kategori',
+    description:
+      'Jelajahi anime berdasarkan genre: action, romance, isekai, comedy, dan lainnya. Semua dengan subtitle Indonesia.',
+    canonicalPath: '/genres',
+    keywords: ['genre anime', 'anime berdasarkan genre'],
   })
 
-  const {
-    data: genres,
-    loading: genresLoading,
-    error: genresError,
-    reload: reloadGenres,
-  } = useAsyncData(getGenres)
+  const { data: genres, loading, error, reload } = useAsyncData(getGenres)
 
-  useEffect(() => {
-    if (genresLoading || selectedGenre || !genres?.length) {
-      return
-    }
-
-    const params = new URLSearchParams(searchParams)
-    params.set('genre', genres[0].slug ?? '')
-    params.set('page', '1')
-    setSearchParams(params, { replace: true })
-  }, [genres, genresLoading, searchParams, selectedGenre, setSearchParams])
-
-  const fetchAnimeByGenre = useCallback(() => {
-    if (!selectedGenre) {
-      return Promise.resolve({ items: [], pagination: null })
-    }
-
-    return getAnimeByGenre(selectedGenre, currentPage)
-  }, [currentPage, selectedGenre])
-
-  const {
-    data: genreAnime,
-    loading: animeLoading,
-    error: animeError,
-    reload: reloadAnime,
-  } = useAsyncData(fetchAnimeByGenre, { enabled: Boolean(selectedGenre) })
-
-  const selectedGenreName = useMemo(() => {
-    return genres?.find((genre) => genre.slug === selectedGenre)?.name || '-'
-  }, [genres, selectedGenre])
-
-  const handlePickGenre = (slug?: string) => {
-    if (!slug) {
-      return
-    }
-
-    const params = new URLSearchParams(searchParams)
-    params.set('genre', slug)
-    params.set('page', '1')
-    setSearchParams(params)
-  }
-
-  const handleChangePage = (page: number) => {
-    const params = new URLSearchParams(searchParams)
-    params.set('page', String(page))
-    setSearchParams(params)
+  // Tautan lama `/genres?genre=x&page=n` dialihkan ke halaman genre tersendiri.
+  if (legacyGenre) {
+    const page = searchParams.get('page')
+    return <Navigate to={genrePath(legacyGenre, Number(page) || 1)} replace />
   }
 
   return (
     <div className="container-app py-6 sm:py-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="section-title">Genre List</h1>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => void reloadGenres()}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
-          >
-            Refresh Genre
-          </button>
-          <button
-            type="button"
-            onClick={() => void reloadAnime()}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
-          >
-            Refresh Anime
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => void reload()}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+        >
+          Refresh
+        </button>
       </div>
 
-      {genresLoading && (
-        <div className="mb-6 grid grid-cols-2 gap-2 animate-pulse sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {loading && (
+        <div className="grid grid-cols-2 gap-2 animate-pulse sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {Array.from({ length: 12 }, (_, index) => (
             <div key={`genre-skeleton-${index}`} className="h-9 rounded-md bg-slate-200 dark:bg-slate-800" />
           ))}
         </div>
       )}
 
-      {!genresLoading && genresError && (
-        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat daftar genre.</p>
-          <p className="mt-1">{genresError}</p>
-        </div>
-      )}
-
-      {!genresLoading && !genresError && (
-        <div className="mb-6 grid grid-cols-2 gap-2 border-b border-slate-200 pb-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 dark:border-slate-800">
-          {(genres ?? []).map((genre) => (
-            <button
-              key={genre.slug ?? genre.name}
-              type="button"
-              onClick={() => handlePickGenre(genre.slug)}
-              title={genre.name}
-              className={`truncate rounded-md border px-3 py-2 text-center text-xs font-semibold transition ${
-                selectedGenre === genre.slug
-                  ? 'border-rose-300 bg-rose-50 text-rose-600'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600'
-              }`}
-            >
-              {genre.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {!animeLoading && selectedGenre && (
-        <p className="mb-4 text-sm font-semibold text-slate-700">Filter aktif: {selectedGenreName}</p>
-      )}
-
-      {animeLoading && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <CardSkeleton count={12} />
-        </div>
-      )}
-
-      {!animeLoading && animeError && (
+      {!loading && error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat anime berdasarkan genre.</p>
-          <p className="mt-1">{animeError}</p>
+          <p className="font-semibold">Gagal memuat daftar genre.</p>
+          <p className="mt-1">{error}</p>
         </div>
       )}
 
-      {!animeLoading && !animeError && (genreAnime?.items.length ?? 0) === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-          Anime untuk genre ini belum tersedia.
-        </div>
-      )}
-
-      {!animeLoading && !animeError && (genreAnime?.items.length ?? 0) > 0 && (
-        <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {genreAnime?.items.map((anime) => (
-              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+      {!loading && !error && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {(genres ?? [])
+            .filter((genre) => genre.slug)
+            .map((genre) => (
+              <Link
+                key={genre.slug}
+                to={genrePath(genre.slug ?? '')}
+                state={{ genreName: genre.name }}
+                title={genre.name}
+                className="truncate rounded-md border border-slate-200 bg-white px-3 py-2 text-center text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:text-rose-600"
+              >
+                {genre.name}
+              </Link>
             ))}
-          </div>
-
-          <Pagination
-            pagination={genreAnime?.pagination}
-            currentPage={currentPage}
-            onChange={handleChangePage}
-          />
-        </>
+        </div>
       )}
     </div>
   )

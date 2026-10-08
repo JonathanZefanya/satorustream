@@ -12,6 +12,7 @@ import { useSource } from './contexts/sourceContext'
 import AnimeListPage from './pages/AnimeListPage'
 import DetailPage from './pages/DetailPage'
 import GenreListPage from './pages/GenreListPage'
+import GenrePage from './pages/GenrePage'
 import HistoryPage from './pages/HistoryPage'
 import HomePage from './pages/HomePage'
 import JadwalRilisPage from './pages/JadwalRilisPage'
@@ -86,6 +87,10 @@ const AppLayout = ({ theme, onToggleTheme }: AppLayoutProps) => {
           <Route
             path="/genres"
             element={capabilities.genres ? <GenreListPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/genres/:genre"
+            element={capabilities.genres ? <GenrePage /> : <Navigate to="/" replace />}
           />
           <Route path="/anime/:endpoint" element={<DetailPage />} />
           <Route
