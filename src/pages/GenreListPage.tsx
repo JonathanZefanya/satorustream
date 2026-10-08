@@ -116,9 +116,9 @@ const GenreListPage = () => {
       </div>
 
       {genresLoading && (
-        <div className="mb-6 flex flex-wrap gap-2 animate-pulse">
-          {Array.from({ length: 10 }, (_, index) => (
-            <div key={`genre-skeleton-${index}`} className="h-8 w-24 rounded-full bg-slate-200" />
+        <div className="mb-6 grid grid-cols-2 gap-2 animate-pulse sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {Array.from({ length: 12 }, (_, index) => (
+            <div key={`genre-skeleton-${index}`} className="h-9 rounded-md bg-slate-200 dark:bg-slate-800" />
           ))}
         </div>
       )}
@@ -131,13 +131,14 @@ const GenreListPage = () => {
       )}
 
       {!genresLoading && !genresError && (
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-5 dark:border-slate-800">
+        <div className="mb-6 grid grid-cols-2 gap-2 border-b border-slate-200 pb-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 dark:border-slate-800">
           {(genres ?? []).map((genre) => (
             <button
               key={genre.slug ?? genre.name}
               type="button"
               onClick={() => handlePickGenre(genre.slug)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              title={genre.name}
+              className={`truncate rounded-md border px-3 py-2 text-center text-xs font-semibold transition ${
                 selectedGenre === genre.slug
                   ? 'border-rose-300 bg-rose-50 text-rose-600'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600'
