@@ -32,8 +32,15 @@ export const SOURCE_IDS = Object.keys(SOURCES)
  */
 export const DEV_ONLY_SOURCE_IDS = ['kuramanime', 'doronime']
 
+/** Sumber yang sedang down; dinonaktifkan di semua build sampai pulih. */
+export const DISABLED_SOURCE_IDS = ['nimegami']
+
 const isSelectable = (id: string): boolean => {
-  return Boolean(SOURCES[id]) && (import.meta.env.DEV || !DEV_ONLY_SOURCE_IDS.includes(id))
+  return (
+    Boolean(SOURCES[id]) &&
+    !DISABLED_SOURCE_IDS.includes(id) &&
+    (import.meta.env.DEV || !DEV_ONLY_SOURCE_IDS.includes(id))
+  )
 }
 
 /** Sumber yang boleh tampil di pemilih "Sumber" pada build ini. */
