@@ -3,6 +3,7 @@ import { kuramanimeAdapter } from './kuramanime'
 import { nimegamiAdapter } from './nimegami'
 import { oploverzAdapter } from './oploverz'
 import { otakudesuAdapter } from './otakudesu'
+import { ylnimeAdapter } from './ylnime'
 import type { SourceAdapter } from './types'
 
 export const SOURCES: Record<string, SourceAdapter> = {
@@ -11,6 +12,7 @@ export const SOURCES: Record<string, SourceAdapter> = {
   nimegami: nimegamiAdapter,
   kuramanime: kuramanimeAdapter,
   doronime: doronimeAdapter,
+  ylnime: ylnimeAdapter,
 }
 
 export const SOURCE_IDS = Object.keys(SOURCES)

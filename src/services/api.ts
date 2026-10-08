@@ -40,12 +40,12 @@ export const getAnimeListPage = async (initial: string, page = 1): Promise<Paged
 
   const endpoint = source.id === 'otakudesu' ? 'anime' : 'anime-list'
   const request = requirePayload<
-    { initial: string; animeList: { title: string; url: string }[] }[]
+    { initial: string; animeList: { title: string; url: string; slug?: string }[] }[]
   >(`${source.id}/${endpoint}`, { params: { initial, page } })
     .then(({ data, pagination }) => ({
       items: (data[0]?.animeList ?? []).map((anime) => ({
         title: anime.title,
-        slug: idFromUrl(anime.url),
+        slug: anime.slug ?? idFromUrl(anime.url),
         otakudesu_url: anime.url,
       })),
       pagination,
