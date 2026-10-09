@@ -337,9 +337,9 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b bg-white transition-shadow duration-200 dark:bg-slate-950 ${
+      className={`app-header sticky top-0 z-40 border-b transition-shadow duration-200 ${
         isScrolled
-          ? 'border-slate-200 dark:border-slate-800'
+          ? 'border-slate-200 shadow-[0_8px_24px_-20px_rgba(15,23,42,0.45)]'
           : 'border-transparent dark:border-transparent'
       }`}
     >
@@ -352,7 +352,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
             to="/"
             className="order-1 mr-auto flex shrink-0 items-center gap-2.5 text-slate-900 md:mr-0 dark:text-slate-100"
           >
-            <span className="rounded-lg bg-rose-600 p-2 text-white">
+            <span className="rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 p-2 text-white shadow-[0_6px_16px_-8px_rgba(225,29,72,0.7)]">
               <TvMinimalPlay className="h-5 w-5" />
             </span>
             <span className="flex flex-col leading-tight">
@@ -500,10 +500,10 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:focus-visible:ring-rose-500/30 ${
+                    `inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:focus-visible:ring-rose-500/30 ${
                       isActive
-                        ? 'bg-rose-600 text-white'
-                        : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300'
+                        ? 'bg-rose-500/10 text-rose-600 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-400/25'
+                        : 'text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
                     }`
                   }
                 >

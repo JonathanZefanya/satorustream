@@ -1,37 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Light mode sengaja tidak memakai putih murni: latar abu-abu kebiruan
+     dan permukaan sedikit lebih terang supaya tidak menyilaukan.
+     Nilai berupa kanal RGB agar bisa dipakai Tailwind dengan opacity. */
   :root {
     color-scheme: light;
     --brand-primary: #e4572e;
     --brand-secondary: #c2412d;
     --brand-ink: #0f172a;
+    --c-app-bg: 231 233 238;
+    --c-surface: 243 244 247;
+    --c-surface-raised: 247 248 250;
+    --c-surface-muted: 225 228 234;
+    --c-surface-sunken: 214 218 226;
+    --c-line: 211 216 224;
+    --c-line-soft: 221 225 231;
+    --c-ink: 28 34 48;
+    --c-ink-soft: 43 50 67;
+    --app-bg-glow: rgba(225, 29, 72, 0.07);
+    --header-bg: rgba(231, 233, 238, 0.82);
   }
 
   html.dark {
     color-scheme: dark;
+    --c-app-bg: 11 17 32;
+    --c-surface: 17 24 39;
+    --c-surface-raised: 21 30 48;
+    --c-surface-muted: 30 41 59;
+    --c-surface-sunken: 51 65 85;
+    --c-line: 38 50 72;
+    --c-line-soft: 30 41 59;
+    --c-ink: 241 245 249;
+    --c-ink-soft: 226 232 240;
+    --app-bg-glow: rgba(225, 29, 72, 0.09);
+    --header-bg: rgba(11, 17, 32, 0.8);
   }
 
   * {
-    @apply border-slate-200;
+    border-color: rgb(var(--c-line));
   }
 
   html {
     scroll-behavior: smooth;
+    background-color: rgb(var(--c-app-bg));
   }
 
   body {
-    @apply min-h-screen bg-[#f6f6f4] text-slate-900 antialiased;
+    @apply min-h-screen antialiased;
+    background-color: rgb(var(--c-app-bg));
+    background-image: radial-gradient(70rem 28rem at 50% -8rem, var(--app-bg-glow), transparent 70%);
+    background-repeat: no-repeat;
+    color: rgb(var(--c-ink));
     font-family: 'Manrope', sans-serif;
     transition: background-color 180ms ease, color 180ms ease;
   }
 
-  html.dark body {
-    @apply bg-slate-950 text-slate-100;
+  ::selection {
+    background-color: rgba(225, 29, 72, 0.2);
   }
 
   #root {
@@ -45,64 +75,27 @@
   }
 
   .section-title {
-    @apply text-xl font-bold tracking-tight text-slate-900 sm:text-2xl;
+    @apply flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl;
     font-family: 'Space Grotesk', sans-serif;
   }
 
-  html.dark .section-title {
-    @apply text-slate-100;
+  .section-title::before {
+    content: '';
+    @apply h-5 w-1 shrink-0 rounded-full bg-rose-500 sm:h-6;
   }
 
   .surface-panel {
-    @apply rounded-lg border border-slate-200 bg-white;
+    @apply rounded-xl border border-slate-100 bg-white;
   }
 
-  html.dark .surface-panel {
-    @apply border-slate-700 bg-slate-900;
+  .app-header {
+    background-color: var(--header-bg);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
   }
 }
 
 @layer utilities {
-  .rounded-2xl {
-    border-radius: 0.5rem !important;
-  }
-
-  .shadow-soft {
-    box-shadow: none !important;
-  }
-
-  html.dark .bg-white {
-    background-color: rgb(15 23 42 / 1) !important;
-  }
-
-  html.dark .bg-white\/90 {
-    background-color: rgb(15 23 42 / 0.9) !important;
-  }
-
-  html.dark .bg-white\/95 {
-    background-color: rgb(15 23 42 / 0.95) !important;
-  }
-
-  html.dark .bg-slate-50 {
-    background-color: rgb(15 23 42 / 1) !important;
-  }
-
-  html.dark .bg-slate-100 {
-    background-color: rgb(30 41 59 / 1) !important;
-  }
-
-  html.dark .bg-slate-200 {
-    background-color: rgb(51 65 85 / 1) !important;
-  }
-
-  html.dark .text-slate-900 {
-    color: rgb(248 250 252 / 1) !important;
-  }
-
-  html.dark .text-slate-800 {
-    color: rgb(241 245 249 / 1) !important;
-  }
-
   html.dark .text-slate-700 {
     color: rgb(226 232 240 / 1) !important;
   }
@@ -119,17 +112,10 @@
     color: rgb(100 116 139 / 1) !important;
   }
 
-  html.dark .border-slate-200 {
-    border-color: rgb(51 65 85 / 1) !important;
+  html:not(.dark) .bg-rose-50 {
+    background-color: rgb(225 29 72 / 0.08);
   }
 
-  html.dark .border-slate-200\/70 {
-    border-color: rgb(51 65 85 / 0.7) !important;
-  }
-}
-
-@layer utilities {
-  /* Baris menu navbar bisa digeser tanpa scrollbar yang mengganggu. */
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -139,7 +125,6 @@
     display: none;
   }
 
-  /* Panel dropdown muncul dengan gerakan singkat, dan diam untuk reduced motion. */
   @keyframes pop-in {
     from {
       opacity: 0;

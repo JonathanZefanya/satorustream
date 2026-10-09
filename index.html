@@ -52,8 +52,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="SatoruStream" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7e9ee" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1120" />
 
     <!-- ====================== Performa ====================== -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -98,6 +98,15 @@
           }
         ]
       }
+    </script>
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('satorustream-theme');
+          var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
     </script>
   </head>
   <body>

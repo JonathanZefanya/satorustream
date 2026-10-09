@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import ContinueWatchingCard from '../components/ContinueWatchingCard'
@@ -39,7 +40,7 @@ const RecommendationWidgetItem = ({ anime }: { anime: AnimeItem }) => {
   return (
     <Link
       to={`/anime/${anime.slug}`}
-      className="flex items-center gap-3 border-b border-slate-200 pb-3 last:border-0 last:pb-0 dark:border-slate-800"
+      className="group flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-slate-100 dark:hover:bg-slate-800/60"
     >
       <img
         src={anime.poster || 'https://placehold.co/96x128?text=No+Image'}
@@ -48,9 +49,9 @@ const RecommendationWidgetItem = ({ anime }: { anime: AnimeItem }) => {
         decoding="async"
         width={48}
         height={64}
-        className="h-16 w-12 shrink-0 rounded object-cover"
+        className="h-16 w-12 shrink-0 rounded-md object-cover ring-1 ring-black/5 dark:ring-white/5"
       />
-      <span className="line-clamp-2 text-sm font-semibold leading-5 text-slate-800 dark:text-slate-200">
+      <span className="line-clamp-2 text-sm font-semibold leading-5 text-slate-800 transition group-hover:text-rose-600 dark:text-slate-200 dark:group-hover:text-rose-300">
         {anime.title || 'Untitled Anime'}
       </span>
     </Link>
@@ -283,16 +284,18 @@ const HomePage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <main className="min-w-0">
-          <section>
-        <div className="mb-4 flex items-center justify-between">
+          <section className="surface-panel p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
           <h1 className="section-title">Ongoing Anime</h1>
           <button
             type="button"
             onClick={() => void reload()}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-300 hover:text-rose-600 disabled:opacity-60 dark:hover:border-rose-500/50 dark:hover:text-rose-300"
           >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -304,7 +307,7 @@ const HomePage = () => {
         )}
 
         {!loading && error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
             <p className="font-semibold">Failed to load anime data.</p>
             <p className="mt-1">{error}</p>
           </div>
@@ -321,8 +324,8 @@ const HomePage = () => {
 
       {/* Tidak semua sumber menyediakan daftar selesai — sembunyikan kalau kosong. */}
       {(loading || (data?.complete.length ?? 0) > 0) && (
-        <section className="mt-10">
-          <h2 className="section-title">Completed Anime</h2>
+        <section className="surface-panel mt-6 p-4 sm:p-5">
+          <h2 className="section-title border-b border-slate-100 pb-3">Completed Anime</h2>
           {loading ? (
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               <CardSkeleton count={12} />
@@ -340,9 +343,9 @@ const HomePage = () => {
 
         <aside className="space-y-6 lg:sticky lg:top-24">
           {continueWatching.length > 0 && (
-            <section>
-              <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">Continue</p>
+            <section className="surface-panel p-4 sm:p-5">
+              <div className="mb-3 border-b border-slate-100 pb-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Continue</p>
                 <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">Lanjutkan tontonan</h2>
               </div>
               <div className="space-y-3">
@@ -357,16 +360,16 @@ const HomePage = () => {
           )}
 
           {recommendedItems.length > 0 && (
-            <section>
-              <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">
+            <section className="surface-panel p-4 sm:p-5">
+              <div className="mb-3 border-b border-slate-100 pb-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600 line-clamp-2 dark:text-rose-400">
                   {data?.recommendations?.sourceTitle
                     ? `Karena kamu menonton ${data.recommendations.sourceTitle}`
                     : 'Recommendations'}
                 </p>
                 <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">Rekomendasi</h2>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {recommendedItems.slice(0, 5).map((anime) => (
                   <RecommendationWidgetItem key={anime.slug ?? anime.title} anime={anime} />
                 ))}

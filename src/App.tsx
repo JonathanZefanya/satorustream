@@ -32,7 +32,11 @@ const getInitialTheme = (): Theme => {
   }
 
   const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-  return savedTheme === 'dark' ? 'dark' : 'light'
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    return savedTheme
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 const NotFoundPage = () => {
@@ -44,7 +48,7 @@ const NotFoundPage = () => {
 
   return (
     <div className="container-app py-10">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-900">
+      <div className="surface-panel p-6 text-center">
         <p className="text-xl font-bold text-slate-900 dark:text-slate-100">Page not found</p>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">The route you are looking for does not exist.</p>
       </div>

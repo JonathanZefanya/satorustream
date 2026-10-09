@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
@@ -74,41 +75,47 @@ const AnimeListPage = () => {
   }, [selectedLetter])
 
   return (
-    <div className="container-app py-6 sm:py-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="section-title">{title}</h1>
-        <button
-          type="button"
-          onClick={() => void reload()}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
-        >
-          Refresh
-        </button>
-      </div>
-
-      <div className="mb-5 overflow-x-auto border-b border-slate-200 pb-3 dark:border-slate-800">
-        <div className="flex min-w-max gap-2">
-          {LETTERS.map((letter) => (
-            <button
-              key={letter}
-              type="button"
-              onClick={() => selectLetter(letter)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-                selectedLetter === letter
-                  ? 'border-rose-300 bg-rose-50 text-rose-600'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600'
-              }`}
-            >
-              {letter}
-            </button>
-          ))}
+    <div className="container-app space-y-6 py-6 sm:py-8">
+      <section className="surface-panel p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <h1 className="section-title">{title}</h1>
+          <button
+            type="button"
+            onClick={() => void reload()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-300 hover:text-rose-600 disabled:opacity-60 dark:hover:border-rose-500/50 dark:hover:text-rose-300"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
-      </div>
 
+        <div className="-mx-1 mt-4 overflow-x-auto no-scrollbar">
+          <div className="flex min-w-max gap-1.5 px-1">
+            {LETTERS.map((letter) => (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => selectLetter(letter)}
+                aria-pressed={selectedLetter === letter}
+                className={`h-8 min-w-8 rounded-lg px-2.5 text-xs font-bold transition ${
+                  selectedLetter === letter
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-300'
+                }`}
+              >
+                {letter}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-panel p-2 sm:p-3">
       {loading && !pageData && (
-        <ul className="grid gap-x-6 sm:grid-cols-2">
+        <ul className="grid gap-x-4 sm:grid-cols-2">
           {Array.from({ length: 18 }, (_, index) => (
-            <li key={index} className="border-b border-slate-200 px-1 py-3 dark:border-slate-800">
+            <li key={index} className="px-3 py-3">
               <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
             </li>
           ))}
@@ -116,20 +123,20 @@ const AnimeListPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
           <p className="font-semibold">Gagal memuat anime list.</p>
           <p className="mt-1">{error}</p>
         </div>
       )}
 
       {!loading && !error && visibleAnime.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        <p className="p-4 text-sm text-slate-600">
           Tidak ada anime dengan huruf awal {selectedLetter}.
-        </div>
+        </p>
       )}
 
       {!error && visibleAnime.length > 0 && (
-        <ul className="grid gap-x-6 sm:grid-cols-2">
+        <ul className="grid px-1 sm:grid-cols-2">
           {visibleAnime.map((anime) => {
             const meta = anime.current_episode ?? anime.status ?? (anime.episode_count ? `Ep ${anime.episode_count}` : null)
             const content = (
@@ -143,15 +150,18 @@ const AnimeListPage = () => {
               </>
             )
             const rowClass =
-              'flex items-center gap-3 border-b border-slate-200 px-1 py-2.5 text-sm font-medium text-slate-800 dark:border-slate-800 dark:text-slate-200'
+              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-200'
 
             return (
-              <li key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`}>
+              <li
+                key={`${anime.slug ?? anime.title}-${anime.current_episode ?? anime.episode_count ?? ''}`}
+                className="border-b border-slate-100 py-0.5 last:border-b-0 sm:odd:border-r sm:odd:pr-3 sm:even:pl-3 sm:[&:nth-last-child(2):nth-child(odd)]:border-b-0 sm:[&:last-child:nth-child(odd)]:border-r-0"
+              >
                 {anime.slug ? (
                   <Link
                     to={`/anime/${anime.slug}`}
                     title={anime.title}
-                    className={`${rowClass} transition hover:text-rose-600 dark:hover:text-rose-400`}
+                    className={`${rowClass} transition hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800/60 dark:hover:text-rose-400`}
                   >
                     {content}
                   </Link>
@@ -163,6 +173,7 @@ const AnimeListPage = () => {
           })}
         </ul>
       )}
+      </section>
 
       {!loading && !error && pageCount > 1 && (
         <Pagination
