@@ -35,7 +35,7 @@ export const SOURCE_IDS = Object.keys(SOURCES)
  * residensial.
  */
 export const DEV_ONLY_SOURCE_IDS = ['kuramanime', 'doronime', 'nontonanimeid']
-export const DISABLED_SOURCE_IDS = ['nimegami']
+export const DISABLED_SOURCE_IDS = ['nimegami', 'oploverz']
 
 const isSelectable = (id: string): boolean => {
   return (
