@@ -6,9 +6,11 @@ import type {
   Genre,
   PagedItems,
   ScheduleDay,
+  StreamServer,
 } from '../../types/anime'
 import { UnsupportedFeatureError, type SourceAdapter } from './types'
 import {
+  BASE_URL,
   encodeCompositeSlug,
   encodeSegment,
   getPayload,
@@ -47,6 +49,47 @@ type AnimeDetailsPayload = {
   studioList: PropertyCard[]
 }
 
+type UrlLink = { title: string; url: string }
+
+type EpisodeDetailsPayload = {
+  title: string
+  navigation?: { prev: { sourceUrl?: string } | null; next: { sourceUrl?: string } | null }
+  streaming: UrlLink[]
+  downloadLinks: { title: string; qualityList: { title: string; size: string; urlList?: UrlLink[] }[] }[]
+}
+
+/** Slug episode: `<id>/<slug anime>/<nomor episode>` dalam satu segmen. */
+const episodeSlugFromUrl = (url?: string): string | undefined => {
+  const match = String(url ?? '').match(/\/anime\/(\d+)\/([^/?#]+)\/episode\/([^/?#]+)/)
+  return match ? encodeCompositeSlug(match[1], match[2], match[3]) : undefined
+}
+
+/**
+ * Mirror kdrive (`*.my.id/kdrive/…`) membalas intro Kuramanime ~10 detik untuk
+ * request <video> dari domain lain, jadi diputar lewat proxy backend.
+ * URL R2 tetap langsung.
+ */
+const playableUrl = (url: string): string => {
+  if (!/^https:\/\/[^/]+\/kdrive\//.test(url)) return url
+
+  // Nama file ikut di path supaya URL proxy tetap dikenali sebagai .mp4.
+  const file = new URL(url).pathname.split('/').pop() || 'video.mp4'
+  return `${BASE_URL}${PREFIX}/stream/${encodeURIComponent(file)}?url=${encodeURIComponent(url)}`
+}
+
+const toDownloadUrls = (formats: EpisodeDetailsPayload['downloadLinks'] = []) => {
+  const group = (name: string) =>
+    formats
+      .filter((format) => format.title.toLowerCase() === name)
+      .flatMap((format) => format.qualityList)
+      .map((quality) => ({
+        resolution: quality.size ? `${quality.title} — ${quality.size}` : quality.title,
+        urls: (quality.urlList ?? []).map((link) => ({ provider: link.title, url: link.url })),
+      }))
+
+  return { mp4: group('mp4'), mkv: group('mkv') }
+}
+
 /**
  * Kartu Kuramanime hanya memuat id numerik, sedangkan endpoint detail butuh
  * `<id>/<slug>`. Keduanya dipulihkan dari `sourceUrl` lalu disimpan sebagai
@@ -71,6 +114,17 @@ const fromCard = (card: AnimeCard): AnimeItem => ({
   otakudesu_url: card.sourceUrl,
 })
 
+const episodeList = (animeId: string, animeSlug: string, range?: { first: number; last: number }) => {
+  const first = Number(range?.first) || 0
+  const last = Number(range?.last) || 0
+  if (!first || last < first) return []
+
+  return Array.from({ length: last - first + 1 }, (_, index) => {
+    const episode = String(last - index)
+    return { episode: `Episode ${episode}`, slug: encodeCompositeSlug(animeId, animeSlug, episode) }
+  })
+}
+
 const propertyToGenre = (property: PropertyCard): Genre => ({
   name: property.title,
   slug: property.propertyId,
@@ -89,9 +143,9 @@ export const kuramanimeAdapter: SourceAdapter = {
     genres: true,
     schedule: false,
     animeList: false,
-    // URL video dihasilkan skrip ter-obfuscate dengan token berputar, jadi
-    // tidak bisa diambil dari sisi server.
-    streaming: false,
+    // Backend meniru alur token + POST `authorization` halaman episode;
+    // hasilnya URL MP4 langsung per resolusi.
+    streaming: true,
     downloadOnly: false,
   },
 
@@ -174,17 +228,44 @@ export const kuramanimeAdapter: SourceAdapter = {
       genres: (payload.genreList ?? []).map(propertyToGenre),
       synopsis: (payload.synopsis?.paragraphList ?? []).join('\n\n'),
       batch: null,
-      // Sengaja dikosongkan: episodenya tidak bisa diputar dari sumber ini.
-      episode_lists: [],
+      episode_lists: episodeList(parts[0], parts[1], payload.episodeRange),
       recommendations: [],
     }
   },
 
-  getEpisode(): Promise<EpisodeDetail> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Pemutaran episode'))
+  async getEpisode(endpoint: string): Promise<EpisodeDetail> {
+    const [animeId, animeSlug, episode] = splitCompositeSlug(endpoint)
+
+    if (!animeId || !animeSlug || !episode) {
+      throw new Error('Episode endpoint harus berbentuk <id>/<slug>/<episode>.')
+    }
+
+    const payload = await getPayload<EpisodeDetailsPayload>(
+      `${PREFIX}/episode/${animeId}/${animeSlug}/${episode}`,
+    )
+
+    const prev = episodeSlugFromUrl(payload.navigation?.prev?.sourceUrl)
+    const next = episodeSlugFromUrl(payload.navigation?.next?.sourceUrl)
+    // Diurutkan dari resolusi terkecil; default tetap memakai yang tertinggi.
+    const servers: StreamServer[] = [...(payload.streaming ?? [])]
+      .sort((a, b) => (Number.parseInt(a.title, 10) || 0) - (Number.parseInt(b.title, 10) || 0))
+      .map((stream) => ({ title: `Kuramadrive ${stream.title}`, serverId: playableUrl(stream.url) }))
+
+    return {
+      episode: payload.title,
+      anime: { slug: encodeCompositeSlug(animeId, animeSlug) },
+      has_previous_episode: Boolean(prev),
+      previous_episode: prev ? { slug: prev } : null,
+      has_next_episode: Boolean(next),
+      next_episode: next ? { slug: next } : null,
+      iframe_url: servers.at(-1)?.serverId ?? '',
+      servers,
+      download_urls: toDownloadUrls(payload.downloadLinks),
+    }
   },
 
-  getStreamServer(): Promise<string> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Server streaming'))
+  /** serverId sudah berupa URL MP4 — tidak perlu diselesaikan lagi. */
+  getStreamServer(server: StreamServer): Promise<string> {
+    return Promise.resolve(server.serverId)
   },
 }
