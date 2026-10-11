@@ -34,7 +34,7 @@ export const SOURCE_IDS = Object.keys(SOURCES)
  * menyusun header sebaik apa pun — perlu browser sungguhan atau proxy ber-IP
  * residensial.
  */
-export const DEV_ONLY_SOURCE_IDS = ['doronime', 'nontonanimeid', 'Kuramanime']
+export const DEV_ONLY_SOURCE_IDS = ['doronime', 'nontonanimeid', 'kuramanime']
 export const DISABLED_SOURCE_IDS = ['nimegami']
 
 const isSelectable = (id: string): boolean => {
