@@ -21,6 +21,8 @@ import {
 } from './shared'
 
 const PREFIX = '/oploverz'
+/** Batas pengaman: 30 halaman × 10 judul. */
+const MAX_SEARCH_PAGES = 30
 const LABEL = 'Oploverz'
 
 type AnimeCard = {
@@ -168,8 +170,24 @@ export const oploverzAdapter: SourceAdapter = {
     const keyword = query.trim()
     if (!keyword) return []
 
-    const data = await getPayload<AnimeCard[]>(`${PREFIX}/search`, { params: { q: keyword } })
-    return data.map(fromCard)
+    // Oploverz membagi hasil 10 judul per halaman; semua halaman diambil
+    // supaya SearchPage bisa memfilter dan memaginasi seluruh hasilnya.
+    const first = await requirePayload<AnimeCard[]>(`${PREFIX}/search`, { params: { q: keyword } })
+    const totalPages = Math.min(first.pagination?.last_visible_page ?? 1, MAX_SEARCH_PAGES)
+
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+        getPayload<AnimeCard[]>(`${PREFIX}/search`, { params: { q: keyword, page: index + 2 } }).catch(
+          () => [] as AnimeCard[],
+        ),
+      ),
+    )
+
+    const seen = new Set<string>()
+    return [first.data, ...rest]
+      .flat()
+      .filter((card) => !seen.has(card.slug) && Boolean(seen.add(card.slug)))
+      .map(fromCard)
   },
 
   async getDetail(endpoint: string): Promise<AnimeDetail> {
