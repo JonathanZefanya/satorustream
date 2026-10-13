@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import Pagination from '../components/Pagination'
@@ -33,10 +33,14 @@ const SearchPage = () => {
     initialData: [],
   })
 
-  useEffect(() => {
+  // Filter dikembalikan ke "semua" setiap kata kunci berganti. Disesuaikan
+  // saat render (bukan di effect) supaya tidak render berantai.
+  const [filteredQuery, setFilteredQuery] = useState(query)
+  if (filteredQuery !== query) {
+    setFilteredQuery(query)
     setStatusFilter('all')
     setSeasonFilter('all')
-  }, [query])
+  }
 
   const statusOptions = useMemo(() => {
     const options = new Set<string>()

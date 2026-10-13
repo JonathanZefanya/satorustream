@@ -71,6 +71,7 @@ npm run dev                                        # http://localhost:5173
 | `npm run build` | `tsc -b` → `vite build` → buat `robots.txt` + `sitemap.xml`. |
 | `npm run preview` | Menyajikan `dist/`. Wajib dipakai untuk menguji PWA. |
 | `npm run lint` | ESLint untuk seluruh proyek. |
+| `npm test` | Unit test Vitest untuk utilitas slug, label episode, dan deteksi URL video. |
 
 ## Konfigurasi environment
 
