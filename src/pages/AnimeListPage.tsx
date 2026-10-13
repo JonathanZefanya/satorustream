@@ -10,6 +10,8 @@ import Pagination from '../components/Pagination'
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const DEFAULT_LETTER = '#'
 const LAST_LETTER_KEY = 'anime-list-letter-v1'
+/** Ukuran halaman `paginateAnimeList` di backend, dipakai untuk nomor urut. */
+const PAGE_SIZE = 50
 
 const AnimeListPage = () => {
   // Huruf aktif disimpan di URL supaya refresh dan tombol back membuka huruf
@@ -137,10 +139,14 @@ const AnimeListPage = () => {
 
       {!error && visibleAnime.length > 0 && (
         <ul className="grid px-1 sm:grid-cols-2">
-          {visibleAnime.map((anime) => {
+          {visibleAnime.map((anime, index) => {
+            const number = (Math.min(currentPage, pageCount) - 1) * PAGE_SIZE + index + 1
             const meta = anime.current_episode ?? anime.status ?? (anime.episode_count ? `Ep ${anime.episode_count}` : null)
             const content = (
               <>
+                <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
+                  {number}.
+                </span>
                 <span className="min-w-0 flex-1 truncate">{anime.title || 'Untitled Anime'}</span>
                 {meta && (
                   <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
