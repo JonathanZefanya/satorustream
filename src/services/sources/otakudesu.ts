@@ -10,6 +10,7 @@ import type {
 } from '../../types/anime'
 import type { SourceAdapter } from './types'
 import {
+  BASE_URL,
   encodeSegment,
   genreFromLink,
   genreFromName,
@@ -23,6 +24,16 @@ import {
 } from './shared'
 
 const PREFIX = '/otakudesu'
+
+/**
+ * Pemutar desustream menolak di-iframe di luar Otakudesu, dan URL video di
+ * dalamnya dirotasi. Jadi diputar lewat `/otakudesu/play`, yang mengambil URL
+ * terbaru tiap kali diputar lalu me-redirect <video> ke sana.
+ */
+const playableUrl = (url: string): string =>
+  /^https?:\/\/([^/]+\.)?desustream\.[a-z]+\//i.test(url)
+    ? `${BASE_URL}${PREFIX}/play/video.mp4?url=${encodeURIComponent(url)}`
+    : url
 
 type OngoingCard = {
   title: string
@@ -280,7 +291,7 @@ export const otakudesuAdapter: SourceAdapter = {
       previous_episode: prev ? { slug: idFromUrl(prev.url), otakudesu_url: prev.url } : null,
       has_next_episode: Boolean(next),
       next_episode: next ? { slug: idFromUrl(next.url), otakudesu_url: next.url } : null,
-      iframe_url: payload.defaultStreaming ?? '',
+      iframe_url: payload.defaultStreaming ? playableUrl(payload.defaultStreaming) : '',
       servers: (payload.serverList ?? []).filter((server) => server.serverId),
       download_urls: toDownloadUrls(payload.downloadLinks),
     }
@@ -289,6 +300,6 @@ export const otakudesuAdapter: SourceAdapter = {
   async getStreamServer(server: StreamServer): Promise<string> {
     const serverId = encodeSegment(server.serverId, 'Server id')
     const data = await getPayload<{ title: string; url: string }>(`${PREFIX}/server/${serverId}`)
-    return data.url
+    return playableUrl(data.url)
   },
 }
