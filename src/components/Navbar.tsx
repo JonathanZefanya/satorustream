@@ -2,6 +2,7 @@ import { LogIn, LogOut, Moon, Sun, TvMinimalPlay } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/authContext'
+import ConfirmDialog from './ConfirmDialog'
 import { useSource } from '../contexts/sourceContext'
 import MainNav from './navbar/MainNav'
 import SearchBox from './navbar/SearchBox'
@@ -18,6 +19,28 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
   const { user, enabled: authEnabled, signOut } = useAuth()
   const { sourceId, options, setSourceId } = useSource()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
+
+  const closeSignOut = () => {
+    setConfirmSignOut(false)
+    setSignOutError(null)
+  }
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    setSignOutError(null)
+
+    try {
+      await signOut()
+      setConfirmSignOut(false)
+    } catch (err) {
+      setSignOutError(err instanceof Error ? err.message : 'Gagal keluar. Coba lagi.')
+    } finally {
+      setSigningOut(false)
+    }
+  }
 
   const accountName =
     (user?.user_metadata?.display_name as string | undefined) ?? user?.email?.split('@')[0]
@@ -97,7 +120,7 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
               (user ? (
                 <button
                   type="button"
-                  onClick={() => void signOut()}
+                  onClick={() => setConfirmSignOut(true)}
                   title={`Keluar dari ${accountName ?? 'akun'}`}
                   className={`${controlClass} w-10 gap-1.5 px-0 sm:w-auto sm:px-3`}
                 >
@@ -120,6 +143,25 @@ const Navbar = ({ theme, onToggleTheme }: NavbarProps) => {
 
         <MainNav />
       </div>
+
+      <ConfirmDialog
+        open={confirmSignOut}
+        title="Keluar dari akun?"
+        description={
+          <>
+            <p>
+              Kamu akan keluar dari <span className="font-semibold">{accountName ?? 'akun ini'}</span>.
+              Wishlist dan riwayat tetap tersimpan di akunmu dan muncul lagi saat masuk kembali.
+            </p>
+            {signOutError ? <p className="mt-2 text-rose-600 dark:text-rose-400">{signOutError}</p> : null}
+          </>
+        }
+        confirmLabel="Keluar"
+        tone="danger"
+        busy={signingOut}
+        onConfirm={() => void handleSignOut()}
+        onCancel={closeSignOut}
+      />
     </header>
   )
 }
