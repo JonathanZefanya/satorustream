@@ -1,15 +1,3 @@
-/**
- * Fasad untuk sumber data aktif.
- *
- * Setiap sumber (otakudesu, oploverz, nimegami, kuramanime) punya adapter
- * sendiri di `services/sources/` yang memetakan respons superanime ke tipe
- * domain di `types/anime.ts`. Halaman cukup memanggil fungsi di sini dan tidak
- * perlu tahu sumber mana yang sedang dipakai.
- *
- * Adapter di-resolve pada saat pemanggilan, bukan saat modul dimuat, supaya
- * pergantian sumber dari UI langsung berlaku. Untuk nilai yang perlu memicu
- * render ulang (mis. daftar menu), pakai `useSource()` alih-alih fungsi di sini.
- */
 import { getActiveSource } from './sources'
 import { http, idFromUrl, requirePayload } from './sources/shared'
 import type { AnimeItem, PagedItems, StreamServer } from '../types/anime'
