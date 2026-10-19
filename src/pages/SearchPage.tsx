@@ -1,17 +1,20 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { X } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import Pagination from '../components/Pagination'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
-import { searchAnime } from '../services/api'
+import { advancedSearch, buildSearchQuery, parseSearchQuery, type ParsedQuery } from '../services/advancedSearch'
 
 const PAGE_SIZE = 24
 
 const SearchPage = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q')?.trim() ?? ''
+  const parsed = useMemo(() => parseSearchQuery(query), [query])
   const requestedPage = Math.max(1, Number.parseInt(searchParams.get('page') ?? '1', 10) || 1)
 
   useSeo({
@@ -27,11 +30,17 @@ const SearchPage = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [seasonFilter, setSeasonFilter] = useState('all')
 
-  const fetchSearchResult = useCallback(() => searchAnime(query), [query])
-  const { data, loading, error, reload } = useAsyncData(fetchSearchResult, {
-    enabled: Boolean(query),
-    initialData: [],
+  const fetchSearchResult = useCallback(() => advancedSearch(parsed), [parsed])
+  const { data: result, loading, error, reload } = useAsyncData(fetchSearchResult, {
+    enabled: Boolean(parsed.title || parsed.genres.length),
+    initialData: { items: [], genres: [], unknownGenres: [] },
   })
+  const data = result?.items
+
+  const updateQuery = (next: ParsedQuery) => {
+    const nextQuery = buildSearchQuery(next)
+    navigate(nextQuery ? `/search?q=${encodeURIComponent(nextQuery)}` : '/search')
+  }
 
   // Filter dikembalikan ke "semua" setiap kata kunci berganti. Disesuaikan
   // saat render (bukan di effect) supaya tidak render berantai.
@@ -110,8 +119,8 @@ const SearchPage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="section-title">Search: {query}</h1>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h1 className="section-title">Hasil pencarian</h1>
         <button
           type="button"
           onClick={() => void reload()}
@@ -120,6 +129,54 @@ const SearchPage = () => {
           Retry
         </button>
       </div>
+
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        {parsed.title && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-xs font-semibold text-slate-700">
+            <span className="text-slate-500">title:</span>
+            {parsed.title}
+            <button
+              type="button"
+              onClick={() => updateQuery({ ...parsed, title: '' })}
+              aria-label="Hapus filter judul"
+              className="rounded-full p-0.5 transition hover:bg-slate-200 hover:text-rose-600"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        )}
+        {parsed.genres.map((genre) => {
+          const unknown = result?.unknownGenres.includes(genre)
+          return (
+            <span
+              key={genre}
+              title={unknown ? 'Genre tidak ditemukan di sumber ini' : undefined}
+              className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-1.5 text-xs font-semibold ${
+                unknown
+                  ? 'bg-amber-500/10 text-amber-700 line-through dark:text-amber-300'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
+              }`}
+            >
+              <span className="opacity-70">genre:</span>
+              {genre}
+              <button
+                type="button"
+                onClick={() => updateQuery({ ...parsed, genres: parsed.genres.filter((item) => item !== genre) })}
+                aria-label={`Hapus genre ${genre}`}
+                className="rounded-full p-0.5 transition hover:bg-rose-500/15"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )
+        })}
+      </div>
+
+      {!loading && (result?.unknownGenres.length ?? 0) > 0 && (
+        <p className="mb-4 text-xs text-amber-700 dark:text-amber-300">
+          Genre tidak dikenal di sumber ini: {result?.unknownGenres.join(', ')}. Lihat nama yang tersedia di halaman Genre List.
+        </p>
+      )}
 
       {loading && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -136,7 +193,7 @@ const SearchPage = () => {
 
       {!loading && !error && (data?.length ?? 0) === 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-          No result found for this keyword.
+          Tidak ada anime yang cocok dengan pencarian ini.
         </div>
       )}
 
