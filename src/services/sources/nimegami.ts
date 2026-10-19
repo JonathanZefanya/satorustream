@@ -93,19 +93,21 @@ export const nimegamiAdapter: SourceAdapter = {
   label: LABEL,
   capabilities: {
     ongoing: true,
-    // Tidak ada endpoint daftar completed.
-    completed: false,
+    completed: true,
     search: true,
     genres: true,
-    schedule: true,
-    animeList: true,
+    schedule: false,
+    animeList: false,
     streaming: true,
     downloadOnly: false,
   },
 
   async getHome() {
-    const ongoing = await this.getOngoingPage(1)
-    return { ongoing: ongoing.items, complete: [] }
+    const [ongoing, complete] = await Promise.all([
+      this.getOngoingPage(1),
+      this.getCompletePage(1),
+    ])
+    return { ongoing: ongoing.items, complete: complete.items }
   },
 
   async getOngoingPage(page = 1): Promise<PagedItems<AnimeItem>> {
@@ -115,30 +117,19 @@ export const nimegamiAdapter: SourceAdapter = {
     return { items: data.map(fromCard), pagination }
   },
 
-  getCompletePage(): Promise<PagedItems<AnimeItem>> {
-    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Daftar anime selesai'))
+  async getCompletePage(page = 1): Promise<PagedItems<AnimeItem>> {
+    const { data, pagination } = await requirePayload<AnimeCard[]>(`${PREFIX}/completed`, {
+      params: { page },
+    })
+    return { items: data.map(fromCard), pagination }
   },
 
-  async getSchedule(): Promise<ScheduleDay[]> {
-    const data = await getPayload<{ day: string; animeList: AnimeCard[] }[]>(`${PREFIX}/schedule`)
-
-    return data
-      .map((entry) => ({ day: entry.day, items: (entry.animeList ?? []).map(fromCard) }))
-      .filter((entry) => entry.items.length > 0)
+  getSchedule(): Promise<ScheduleDay[]> {
+    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Jadwal rilis'))
   },
 
-  async getAnimeCollections(): Promise<AnimeCollection[]> {
-    const data = await getPayload<{ initial: string; animeList: UrlLink[] }[]>(
-      `${PREFIX}/anime-list`,
-    )
-    return data.map((entry) => ({
-      initial: entry.initial,
-      items: (entry.animeList ?? []).map((link) => ({
-        title: link.title,
-        slug: idFromUrl(link.url),
-        otakudesu_url: link.url,
-      })),
-    }))
+  getAnimeCollections(): Promise<AnimeCollection[]> {
+    return Promise.reject(new UnsupportedFeatureError(LABEL, 'Katalog A-Z'))
   },
 
   async getGenres(): Promise<Genre[]> {

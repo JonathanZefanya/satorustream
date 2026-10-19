@@ -105,12 +105,11 @@ aktif.
 | NontonAnimeID | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | dev saja |
 | Doronime | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ⬇️ unduhan saja | dev saja |
 | Kuramanime | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | dev saja |
-| Nimegami | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | nonaktif |
+| Nimegami | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | produksi |
 
 - **Dev saja** — situsnya dilindungi Cloudflare yang menolak IP datacenter, jadi API yang
   berjalan di Vercel selalu dibalas 403. Sumber ini tersedia saat `npm run dev` dan
   disembunyikan di build produksi (`DEV_ONLY_SOURCE_IDS`).
-- **Nonaktif** — disembunyikan di semua build (`DISABLED_SOURCE_IDS`).
 - Kuramanime hanya bisa dijelajahi: URL videonya dihasilkan skrip ter-obfuscate di browser.
 
 Menambah sumber baru: buat adapter yang memenuhi `SourceAdapter`
