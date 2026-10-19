@@ -201,7 +201,7 @@ const SearchBox = () => {
             onBlur={() => {
               window.setTimeout(() => setIsFocused(false), 120)
             }}
-            placeholder="Cari judul"
+            placeholder="Cari anime"
             aria-label="Cari anime"
             autoComplete="off"
             className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:ring-2 focus:ring-rose-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-400/70 dark:focus:ring-rose-900/30"
