@@ -5,7 +5,7 @@ export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3
 
 export const http = axios.create({
   baseURL: BASE_URL,
-  timeout: 20000,
+  timeout: 35000,
   headers: {
     Accept: 'application/json',
   },
@@ -56,6 +56,10 @@ export type Format = {
 const parseErrorMessage = (error: unknown): string => {
   if (!axios.isAxiosError(error)) {
     return 'Unexpected error. Please try again.'
+  }
+
+  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    return 'Server sumber terlalu lama merespons. Coba lagi atau pilih sumber lain.'
   }
 
   if (!error.response) {
