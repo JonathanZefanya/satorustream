@@ -10,6 +10,7 @@ import { useSeo } from '../hooks/useSeo'
 import { clearHistoryEntries, getHistory, type HistoryEntry } from '../services/userLibrary'
 import { stripAnimeTitle } from '../utils/episodeLabel'
 import { watchPath } from '../utils/routes'
+import ErrorState from '../components/ErrorState'
 
 const formatWatchedAt = (timestamp: number): string => {
   if (!timestamp) {
@@ -85,7 +86,7 @@ const HistoryPage = () => {
   const [removalError, setRemovalError] = useState<string | null>(null)
 
   const fetchHistory = useCallback(() => getHistory(user?.id), [user?.id])
-  const { data, loading, error, reload, setData } = useAsyncData(fetchHistory, {
+  const { data, loading, error, failure, reload, setData } = useAsyncData(fetchHistory, {
     enabled: !authLoading && Boolean(user),
   })
 
@@ -210,10 +211,7 @@ const HistoryPage = () => {
       )}
 
       {user && !loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat riwayat.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat riwayat" onRetry={reload} />
       )}
 
       {user && !loading && !error && groups.length === 0 && (

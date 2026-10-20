@@ -4,6 +4,7 @@ import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getSchedule } from '../services/api'
+import ErrorState from '../components/ErrorState'
 
 const DAY_ORDER = [
   'senin',
@@ -42,7 +43,7 @@ const normalizeDayLabel = (day?: string): string | null => {
 
 const JadwalRilisPage = () => {
   const fetchSchedule = useCallback(() => getSchedule(), [])
-  const { data, loading, error, reload } = useAsyncData(fetchSchedule)
+  const { data, loading, error, failure, reload } = useAsyncData(fetchSchedule)
 
   useSeo({
     title: 'Jadwal Rilis Anime Terbaru — Update Harian',
@@ -91,10 +92,7 @@ const JadwalRilisPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat jadwal rilis.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat jadwal rilis" onRetry={reload} />
       )}
 
       {!loading && !error && groupedSchedule.length === 0 && (

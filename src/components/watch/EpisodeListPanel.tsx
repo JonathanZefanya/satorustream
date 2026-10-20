@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Episode } from '../../types/anime'
 // gunakan ini jika ingin menampilkan nomor episode di daftar episode
 import { episodeNumberFrom, episodeNumberValue, stripAnimeTitle } from '../../utils/episodeLabel'
+import ErrorState from '../ErrorState'
 // gunakan ini jika ingin menampilkan nomor episode di daftar episode
 // import {  episodeNumberValue, stripAnimeTitle } from '../../utils/episodeLabel'
 
@@ -14,7 +15,8 @@ type EpisodeListPanelProps = {
   animeTitle?: string
   episodes: Episode[]
   loading: boolean
-  error: string | null
+  error: unknown
+  onRetry?: () => void | Promise<void>
 }
 
 /** Urutkan dari episode terbaru; episode tanpa nomor ditaruh di akhir. */
@@ -33,7 +35,7 @@ const sortEpisodes = (episodes: Episode[], animeTitle?: string): Episode[] =>
  * Daftar episode di samping pemutar: pindah episode tanpa harus kembali ke
  * halaman detail, dan episode yang sedang diputar ditandai.
  */
-const EpisodeListPanel = ({ endpoint, animeSlug, animeTitle, episodes, loading, error }: EpisodeListPanelProps) => {
+const EpisodeListPanel = ({ endpoint, animeSlug, animeTitle, episodes, loading, error, onRetry }: EpisodeListPanelProps) => {
   const episodeList = useMemo(() => sortEpisodes(episodes, animeTitle), [episodes, animeTitle])
   const episodeListRef = useRef<HTMLDivElement>(null)
 
@@ -90,9 +92,7 @@ const EpisodeListPanel = ({ endpoint, animeSlug, animeTitle, episodes, loading, 
             ))}
           </div>
         ) : error ? (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Daftar episode gagal dimuat: {error}
-          </p>
+          <ErrorState error={error} title="Daftar episode gagal dimuat" onRetry={onRetry} compact />
         ) : episodeList.length === 0 ? (
           <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
             Sumber ini tidak mengirimkan daftar episode.

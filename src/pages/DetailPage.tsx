@@ -10,13 +10,14 @@ import { getDetail } from '../services/api'
 import { episodeNumberValue, stripAnimeTitle } from '../utils/episodeLabel'
 import { rememberEpisodeAnime } from '../utils/episodeMap'
 import { recordRecommendations, saveAnimeMeta } from '../utils/watchHistory'
+import ErrorState from '../components/ErrorState'
 
 const DetailPage = () => {
   const { endpoint = '' } = useParams()
   const { source, capabilities } = useSource()
 
   const fetchDetail = useCallback(() => getDetail(endpoint), [endpoint])
-  const { data: anime, loading, error, reload } = useAsyncData(fetchDetail, {
+  const { data: anime, loading, error, failure, reload } = useAsyncData(fetchDetail, {
     enabled: Boolean(endpoint),
   })
 
@@ -124,17 +125,7 @@ const DetailPage = () => {
   if (error) {
     return (
       <div className="container-app py-8">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-700">
-          <p className="text-base font-semibold">Unable to load anime detail.</p>
-          <p className="mt-1 text-sm">{error}</p>
-          <button
-            type="button"
-            onClick={() => void reload()}
-            className="mt-4 rounded-lg border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
-          >
-            Try Again
-          </button>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat detail anime" onRetry={reload} />
       </div>
     )
   }

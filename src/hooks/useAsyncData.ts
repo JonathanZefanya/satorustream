@@ -14,6 +14,7 @@ export function useAsyncData<T>(
   const [data, setData] = useState<T | undefined>(initialData)
   const [loading, setLoading] = useState<boolean>(enabled)
   const [error, setError] = useState<string | null>(null)
+  const [failure, setFailure] = useState<unknown>(null)
 
   const reload = useCallback(async () => {
     if (!enabled) {
@@ -23,12 +24,14 @@ export function useAsyncData<T>(
 
     setLoading(true)
     setError(null)
+    setFailure(null)
 
     try {
       const next = await fetcher()
       setData(next)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error occurred.')
+      setFailure(err ?? new Error('Unexpected error occurred.'))
     } finally {
       setLoading(false)
     }
@@ -44,6 +47,7 @@ export function useAsyncData<T>(
     data,
     loading,
     error,
+    failure,
     reload,
     setData,
   }

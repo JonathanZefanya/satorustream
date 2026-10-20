@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
+import ErrorState from './components/ErrorState'
+import { ApiError } from './services/sources/shared'
 import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import PwaPrompt from './components/PwaPrompt'
@@ -39,6 +41,8 @@ const getInitialTheme = (): Theme => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+const NOT_FOUND = new ApiError('http', 'Route not found', 404)
+
 const NotFoundPage = () => {
   useSeo({
     title: 'Halaman tidak ditemukan',
@@ -48,10 +52,11 @@ const NotFoundPage = () => {
 
   return (
     <div className="container-app py-10">
-      <div className="surface-panel p-6 text-center">
-        <p className="text-xl font-bold text-slate-900 dark:text-slate-100">Page not found</p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">The route you are looking for does not exist.</p>
-      </div>
+      <ErrorState
+        error={NOT_FOUND}
+        title="Halaman tidak ditemukan"
+        description="Alamat yang kamu buka tidak ada di SatoruStream."
+      />
     </div>
   )
 }

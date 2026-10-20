@@ -14,6 +14,7 @@ import { useStreamServers } from '../components/watch/useStreamServers'
 import { recordHistory } from '../services/userLibrary'
 import { lookupAnimeSlug, rememberEpisodeAnime } from '../utils/episodeMap'
 import { getAnimeMeta, saveAnimeMeta } from '../utils/watchHistory'
+import ErrorState from '../components/ErrorState'
 
 const WatchPage = () => {
   const { endpoint = '' } = useParams()
@@ -22,7 +23,7 @@ const WatchPage = () => {
   const downloadOnly = capabilities.downloadOnly
 
   const fetchEpisode = useCallback(() => getEpisode(endpoint), [endpoint])
-  const { data, loading, error, reload } = useAsyncData(fetchEpisode, {
+  const { data, loading, error, failure, reload } = useAsyncData(fetchEpisode, {
     enabled: Boolean(endpoint),
   })
 
@@ -64,7 +65,8 @@ const WatchPage = () => {
   const {
     data: animeDetail,
     loading: episodeListLoading,
-    error: episodeListError,
+    failure: episodeListError,
+    reload: reloadEpisodeList,
   } = useAsyncData(fetchEpisodeList, { enabled: Boolean(animeSlug) })
 
   const servers = data?.servers ?? []
@@ -131,17 +133,7 @@ const WatchPage = () => {
   if (error) {
     return (
       <div className="container-app py-8">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-700">
-          <p className="font-semibold">Unable to load episode stream.</p>
-          <p className="mt-1 text-sm">{error}</p>
-          <button
-            type="button"
-            onClick={() => void reload()}
-            className="mt-4 rounded-lg border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat episode" onRetry={reload} />
       </div>
     )
   }
@@ -207,6 +199,7 @@ const WatchPage = () => {
           episodes={animeDetail?.episode_lists ?? []}
           loading={episodeListLoading}
           error={episodeListError}
+          onRetry={reloadEpisodeList}
         />
       </div>
     </div>

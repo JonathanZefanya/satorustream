@@ -3,6 +3,7 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getGenres } from '../services/api'
 import { genrePath } from '../utils/routes'
+import ErrorState from '../components/ErrorState'
 
 const GenreListPage = () => {
   const [searchParams] = useSearchParams()
@@ -16,7 +17,7 @@ const GenreListPage = () => {
     keywords: ['genre anime', 'anime berdasarkan genre'],
   })
 
-  const { data: genres, loading, error, reload } = useAsyncData(getGenres)
+  const { data: genres, loading, error, failure, reload } = useAsyncData(getGenres)
 
   // Tautan lama `/genres?genre=x&page=n` dialihkan ke halaman genre tersendiri.
   if (legacyGenre) {
@@ -46,10 +47,7 @@ const GenreListPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat daftar genre.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat daftar genre" onRetry={reload} />
       )}
 
       {!loading && !error && (

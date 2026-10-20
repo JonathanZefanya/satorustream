@@ -7,6 +7,7 @@ import { useSource } from '../contexts/sourceContext'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getCompletePage, getOngoingPage } from '../services/api'
+import ErrorState from '../components/ErrorState'
 
 type TabKey = 'ongoing' | 'completed'
 
@@ -50,7 +51,7 @@ const OngoingPage = () => {
     () => (activeTab === 'completed' ? getCompletePage(currentPage) : getOngoingPage(currentPage)),
     [activeTab, currentPage],
   )
-  const { data, loading, error, reload } = useAsyncData(fetchPage)
+  const { data, loading, error, failure, reload } = useAsyncData(fetchPage)
 
   const pageSuffix = currentPage > 1 ? ` (Halaman ${currentPage})` : ''
   const canonicalQuery = [isCompleted ? 'tab=completed' : '', currentPage > 1 ? `page=${currentPage}` : '']
@@ -159,10 +160,7 @@ const OngoingPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat daftar anime.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat daftar anime" onRetry={reload} />
       )}
 
       {!loading && !error && items.length === 0 && (

@@ -8,6 +8,7 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getAnimeByGenre } from '../services/api'
 import { genrePath } from '../utils/routes'
+import ErrorState from '../components/ErrorState'
 
 /** Mengubah slug genre ("slice-of-life") menjadi label judul ("Slice Of Life"). */
 const toGenreLabel = (slug: string): string =>
@@ -36,7 +37,7 @@ const GenrePage = () => {
   })
 
   const fetchAnime = useCallback(() => getAnimeByGenre(genre, currentPage), [currentPage, genre])
-  const { data, loading, error, reload } = useAsyncData(fetchAnime, { enabled: Boolean(genre) })
+  const { data, loading, error, failure, reload } = useAsyncData(fetchAnime, { enabled: Boolean(genre) })
   const items = data?.items ?? []
 
   const handleChangePage = (page: number) => {
@@ -75,10 +76,7 @@ const GenrePage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat anime berdasarkan genre.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat anime genre ini" onRetry={reload} />
       )}
 
       {!loading && !error && items.length === 0 && (

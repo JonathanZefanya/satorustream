@@ -7,6 +7,7 @@ import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { advancedSearch, buildSearchQuery, parseSearchQuery, type ParsedQuery } from '../services/advancedSearch'
+import ErrorState from '../components/ErrorState'
 
 const PAGE_SIZE = 24
 
@@ -31,7 +32,7 @@ const SearchPage = () => {
   const [seasonFilter, setSeasonFilter] = useState('all')
 
   const fetchSearchResult = useCallback(() => advancedSearch(parsed), [parsed])
-  const { data: result, loading, error, reload } = useAsyncData(fetchSearchResult, {
+  const { data: result, loading, error, failure, reload } = useAsyncData(fetchSearchResult, {
     enabled: Boolean(parsed.title || parsed.genres.length),
     initialData: { items: [], genres: [], unknownGenres: [] },
   })
@@ -185,10 +186,7 @@ const SearchPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Failed to fetch search results.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat hasil pencarian" onRetry={reload} />
       )}
 
       {!loading && !error && (data?.length ?? 0) === 0 && (

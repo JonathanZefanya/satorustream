@@ -9,6 +9,7 @@ import { useSource } from '../contexts/sourceContext'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getWatchlist, removeFromWatchlist, type WatchlistEntry } from '../services/userLibrary'
+import ErrorState from '../components/ErrorState'
 
 const WishlistPage = () => {
   const { user, loading: authLoading } = useAuth()
@@ -25,7 +26,7 @@ const WishlistPage = () => {
   const [removalError, setRemovalError] = useState<string | null>(null)
 
   const fetchWatchlist = useCallback(() => getWatchlist(user?.id), [user?.id])
-  const { data, loading, error, reload, setData } = useAsyncData(fetchWatchlist, {
+  const { data, loading, error, failure, reload, setData } = useAsyncData(fetchWatchlist, {
     enabled: !authLoading && Boolean(user),
   })
 
@@ -89,10 +90,7 @@ const WishlistPage = () => {
       )}
 
       {user && !loading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <p className="font-semibold">Gagal memuat wishlist.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat wishlist" onRetry={reload} />
       )}
 
       {user && !loading && !error && entries.length === 0 && (

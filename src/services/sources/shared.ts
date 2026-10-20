@@ -53,25 +53,39 @@ export type Format = {
 
 /* ===== Utilitas permintaan ===== */
 
-const parseErrorMessage = (error: unknown): string => {
+export type ApiErrorKind = 'timeout' | 'network' | 'http' | 'empty'
+
+export class ApiError extends Error {
+  readonly kind: ApiErrorKind
+  readonly status?: number
+
+  constructor(kind: ApiErrorKind, message: string, status?: number, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'ApiError'
+    this.kind = kind
+    this.status = status
+  }
+}
+
+const toApiError = (error: unknown): ApiError => {
   if (!axios.isAxiosError(error)) {
-    return 'Unexpected error. Please try again.'
+    return new ApiError('network', 'Unexpected error. Please try again.', undefined, { cause: error })
   }
 
   if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-    return 'Server sumber terlalu lama merespons. Coba lagi atau pilih sumber lain.'
+    return new ApiError('timeout', 'Server sumber terlalu lama merespons.', undefined, { cause: error })
   }
 
   if (!error.response) {
-    return `Tidak bisa terhubung ke API di ${BASE_URL}. Pastikan server superanime sedang berjalan.`
+    return new ApiError('network', `Tidak bisa terhubung ke API di ${BASE_URL}.`, undefined, { cause: error })
   }
 
   const serverMessage =
     typeof error.response.data?.message === 'string' && error.response.data.message
       ? error.response.data.message
-      : null
+      : `Request failed with status ${error.response.status}.`
 
-  return serverMessage ?? `Request failed with status ${error.response.status}.`
+  return new ApiError('http', serverMessage, error.response.status, { cause: error })
 }
 
 export type RequestConfig = { params?: Record<string, string | number> }
@@ -84,7 +98,7 @@ export const request = async <T>(
     const response = await http.get<ApiEnvelope<T>>(url, config)
     return response.data
   } catch (error) {
-    throw new Error(parseErrorMessage(error), { cause: error })
+    throw toApiError(error)
   }
 }
 
@@ -92,7 +106,7 @@ export const getPayload = async <T>(url: string, config?: RequestConfig): Promis
   const envelope = await request<T>(url, config)
 
   if (envelope.data === undefined) {
-    throw new Error(envelope.message || 'No data returned from API.')
+    throw new ApiError('empty', envelope.message || 'No data returned from API.', envelope.statusCode)
   }
 
   return envelope.data
@@ -105,7 +119,7 @@ export const requirePayload = async <T>(
   const envelope = await request<T>(url, config)
 
   if (envelope.data === undefined) {
-    throw new Error(envelope.message || 'No data returned from API.')
+    throw new ApiError('empty', envelope.message || 'No data returned from API.', envelope.statusCode)
   }
 
   return { data: envelope.data, pagination: toPagination(envelope.pagination) }

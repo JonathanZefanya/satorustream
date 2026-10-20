@@ -6,6 +6,7 @@ import { useSeo } from '../hooks/useSeo'
 import { getAnimeListPage } from '../services/api'
 import { readJson, scopedKey, writeJson } from '../utils/storage'
 import Pagination from '../components/Pagination'
+import ErrorState from '../components/ErrorState'
 
 const LETTERS = ['#', ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index))]
 const DEFAULT_LETTER = '#'
@@ -56,7 +57,7 @@ const AnimeListPage = () => {
     () => getAnimeListPage(selectedLetter, currentPage),
     [currentPage, selectedLetter],
   )
-  const { data: pageData, loading, error, reload } = useAsyncData(fetchAnimePage)
+  const { data: pageData, loading, error, failure, reload } = useAsyncData(fetchAnimePage)
   const visibleAnime = pageData?.items ?? []
   const pageCount = pageData?.pagination?.last_visible_page ?? 1
 
@@ -125,10 +126,7 @@ const AnimeListPage = () => {
       )}
 
       {!loading && error && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
-          <p className="font-semibold">Gagal memuat anime list.</p>
-          <p className="mt-1">{error}</p>
-        </div>
+        <ErrorState error={failure} title="Gagal memuat katalog anime" onRetry={reload} className="!border-0 !bg-transparent" />
       )}
 
       {!loading && !error && visibleAnime.length === 0 && (

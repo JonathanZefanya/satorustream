@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
 import ContinueWatchingCard from '../components/ContinueWatchingCard'
 import { CardSkeleton } from '../components/Skeletons'
+import ErrorState from '../components/ErrorState'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { SITE_URL, useSeo } from '../hooks/useSeo'
 import { getAnimeByGenre, getDetail, getHome } from '../services/api'
@@ -238,7 +239,7 @@ const HomePage = () => {
     return { ongoing, complete, recommendations }
   }, [])
 
-  const { data, loading, error, reload } = useAsyncData(fetchHomeData)
+  const { data, loading, error, failure, reload } = useAsyncData(fetchHomeData)
 
   // Riwayat terikat akun, jadi "Lanjutkan tontonan" hanya untuk yang sudah
   // masuk — dan hanya entri dari sumber yang sedang aktif.
@@ -307,10 +308,7 @@ const HomePage = () => {
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
-            <p className="font-semibold">Failed to load anime data.</p>
-            <p className="mt-1">{error}</p>
-          </div>
+          <ErrorState error={failure} title="Gagal memuat anime" onRetry={reload} className="!border-0 !bg-transparent" />
         )}
 
         {!loading && !error && (
