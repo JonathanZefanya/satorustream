@@ -8,6 +8,7 @@ import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
 import { getCompletePage, getOngoingPage } from '../services/api'
 import ErrorState from '../components/ErrorState'
+import { getDisplayPage } from '../utils/repaginate'
 
 type TabKey = 'ongoing' | 'completed'
 
@@ -32,7 +33,7 @@ const TAB_COPY: Record<
 const TAB_KEYS: TabKey[] = ['ongoing', 'completed']
 
 const OngoingPage = () => {
-  const { capabilities } = useSource()
+  const { sourceId, capabilities } = useSource()
 
   // Tab dan nomor halaman disimpan di URL supaya bisa dibagikan, di-bookmark,
   // dan tombol back browser mengembalikan ke tampilan yang sama.
@@ -48,8 +49,13 @@ const OngoingPage = () => {
   const isCompleted = activeTab === 'completed'
 
   const fetchPage = useCallback(
-    () => (activeTab === 'completed' ? getCompletePage(currentPage) : getOngoingPage(currentPage)),
-    [activeTab, currentPage],
+    () =>
+      getDisplayPage(
+        `${sourceId}:${activeTab}`,
+        activeTab === 'completed' ? getCompletePage : getOngoingPage,
+        currentPage,
+      ),
+    [activeTab, currentPage, sourceId],
   )
   const { data, loading, error, failure, reload } = useAsyncData(fetchPage)
 
@@ -154,8 +160,8 @@ const OngoingPage = () => {
       )}
 
       {loading && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <CardSkeleton count={12} />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+          <CardSkeleton count={24} />
         </div>
       )}
 
@@ -184,7 +190,7 @@ const OngoingPage = () => {
 
       {!loading && !error && items.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
             {items.map((anime) => (
               <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
             ))}

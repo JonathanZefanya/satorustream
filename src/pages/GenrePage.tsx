@@ -9,6 +9,8 @@ import { useSeo } from '../hooks/useSeo'
 import { getAnimeByGenre } from '../services/api'
 import { genrePath } from '../utils/routes'
 import ErrorState from '../components/ErrorState'
+import { useSource } from '../contexts/sourceContext'
+import { getDisplayPage } from '../utils/repaginate'
 
 /** Mengubah slug genre ("slice-of-life") menjadi label judul ("Slice Of Life"). */
 const toGenreLabel = (slug: string): string =>
@@ -20,6 +22,7 @@ const toGenreLabel = (slug: string): string =>
 
 const GenrePage = () => {
   const { genre = '' } = useParams()
+  const { sourceId } = useSource()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const pageParam = Number(searchParams.get('page') ?? '1')
@@ -36,7 +39,10 @@ const GenrePage = () => {
     keywords: [`anime ${genreLabel}`, `anime genre ${genreLabel}`, `${genreLabel} sub indo`],
   })
 
-  const fetchAnime = useCallback(() => getAnimeByGenre(genre, currentPage), [currentPage, genre])
+  const fetchAnime = useCallback(
+    () => getDisplayPage(`${sourceId}:genre:${genre}`, (page) => getAnimeByGenre(genre, page), currentPage),
+    [currentPage, genre, sourceId],
+  )
   const { data, loading, error, failure, reload } = useAsyncData(fetchAnime, { enabled: Boolean(genre) })
   const items = data?.items ?? []
 
@@ -70,8 +76,8 @@ const GenrePage = () => {
       </div>
 
       {loading && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <CardSkeleton count={12} />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+          <CardSkeleton count={24} />
         </div>
       )}
 
@@ -87,7 +93,7 @@ const GenrePage = () => {
 
       {!loading && !error && items.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
             {items.map((anime) => (
               <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
             ))}
