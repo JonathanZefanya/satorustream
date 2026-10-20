@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSearchQuery, parseSearchQuery } from './searchQuery'
+import { buildSearchQuery, joinQuery, parseSearchQuery, splitQuery, takeTrailingChip } from './searchQuery'
 
 describe('parseSearchQuery', () => {
   it('teks biasa dianggap judul', () => {
@@ -34,5 +34,34 @@ describe('buildSearchQuery', () => {
     const query = buildSearchQuery({ title: 'oshi no ko', genres: ['slice of life'] })
     expect(query).toBe('genre:slice-of-life title:"oshi no ko"')
     expect(parseSearchQuery(query)).toEqual({ title: 'oshi no ko', genres: ['slice of life'] })
+  })
+})
+
+describe('chip kueri', () => {
+  it('memisahkan token dikenal menjadi chip', () => {
+    expect(splitQuery('genre:harem genre:comedy kaguya title:"oshi no ko"')).toEqual({
+      chips: [
+        { key: 'genre', value: 'harem' },
+        { key: 'genre', value: 'comedy' },
+        { key: 'title', value: 'oshi no ko' },
+      ],
+      text: 'kaguya',
+    })
+  })
+
+  it('token yang diakhiri spasi berubah menjadi chip', () => {
+    expect(takeTrailingChip('kaguya genre:romance ')).toEqual({
+      chip: { key: 'genre', value: 'romance' },
+      rest: 'kaguya ',
+    })
+    expect(takeTrailingChip('title:"oshi no ko" ')).toEqual({ chip: { key: 'title', value: 'oshi no ko' }, rest: '' })
+    expect(takeTrailingChip('kaguya ')).toBeNull()
+    expect(takeTrailingChip('re:zero ')).toBeNull()
+  })
+
+  it('chip dan teks digabung kembali menjadi kueri', () => {
+    const query = joinQuery([{ key: 'genre', value: 'slice of life' }, { key: 'title', value: 'oshi no ko' }], 'extra')
+    expect(query).toBe('genre:slice-of-life title:"oshi no ko" extra')
+    expect(splitQuery(query).chips).toHaveLength(2)
   })
 })

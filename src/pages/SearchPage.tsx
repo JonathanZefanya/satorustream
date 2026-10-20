@@ -1,18 +1,17 @@
-import { useCallback, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useCallback, useMemo } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/AnimeCard'
+import ErrorState from '../components/ErrorState'
 import Pagination from '../components/Pagination'
 import { CardSkeleton } from '../components/Skeletons'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSeo } from '../hooks/useSeo'
-import { advancedSearch, buildSearchQuery, parseSearchQuery, type ParsedQuery } from '../services/advancedSearch'
-import ErrorState from '../components/ErrorState'
+import { advancedSearch, parseSearchQuery } from '../services/advancedSearch'
 
 const PAGE_SIZE = 24
 
 const SearchPage = () => {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q')?.trim() ?? ''
   const parsed = useMemo(() => parseSearchQuery(query), [query])
@@ -28,70 +27,19 @@ const SearchPage = () => {
     canonicalPath: '/search',
     noIndex: Boolean(query),
   })
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [seasonFilter, setSeasonFilter] = useState('all')
 
   const fetchSearchResult = useCallback(() => advancedSearch(parsed), [parsed])
   const { data: result, loading, error, failure, reload } = useAsyncData(fetchSearchResult, {
     enabled: Boolean(parsed.title || parsed.genres.length),
     initialData: { items: [], genres: [], unknownGenres: [] },
   })
-  const data = result?.items
+  const items = result?.items ?? []
+  const unknownGenres = result?.unknownGenres ?? []
 
-  const updateQuery = (next: ParsedQuery) => {
-    const nextQuery = buildSearchQuery(next)
-    navigate(nextQuery ? `/search?q=${encodeURIComponent(nextQuery)}` : '/search')
-  }
-
-  // Filter dikembalikan ke "semua" setiap kata kunci berganti. Disesuaikan
-  // saat render (bukan di effect) supaya tidak render berantai.
-  const [filteredQuery, setFilteredQuery] = useState(query)
-  if (filteredQuery !== query) {
-    setFilteredQuery(query)
-    setStatusFilter('all')
-    setSeasonFilter('all')
-  }
-
-  const statusOptions = useMemo(() => {
-    const options = new Set<string>()
-    ;(data ?? []).forEach((item) => {
-      if (item.status) {
-        options.add(item.status)
-      }
-    })
-    return ['all', ...Array.from(options)]
-  }, [data])
-
-  const seasonOptions = useMemo(() => {
-    const options = new Set<string>()
-    ;(data ?? []).forEach((item) => {
-      if (item.season) {
-        options.add(item.season)
-      }
-    })
-    return ['all', ...Array.from(options)]
-  }, [data])
-
-  const filteredResults = useMemo(() => {
-    let items = data ?? []
-
-    if (statusFilter !== 'all') {
-      const normalized = statusFilter.toLowerCase()
-      items = items.filter((item) => (item.status ?? '').toLowerCase() === normalized)
-    }
-
-    if (seasonFilter !== 'all') {
-      const normalized = seasonFilter.toLowerCase()
-      items = items.filter((item) => (item.season ?? '').toLowerCase() === normalized)
-    }
-
-    return items
-  }, [data, seasonFilter, statusFilter])
-
-  const pageCount = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE))
   const currentPage = Math.min(requestedPage, pageCount)
   const pageStart = (currentPage - 1) * PAGE_SIZE
-  const pagedResults = filteredResults.slice(pageStart, pageStart + PAGE_SIZE)
+  const pagedResults = items.slice(pageStart, pageStart + PAGE_SIZE)
 
   const changePage = (page: number) => {
     setSearchParams((params) => {
@@ -103,16 +51,12 @@ const SearchPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const changeFilter = (apply: () => void) => {
-    apply()
-    if (requestedPage > 1) changePage(1)
-  }
-
   if (!query) {
     return (
       <div className="container-app py-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          Start searching from the input above to discover anime titles.
+        <div className="surface-panel p-6 text-sm text-slate-600">
+          Ketik judul anime di kolom pencarian, atau pakai <code className="font-semibold">genre:</code> dan{' '}
+          <code className="font-semibold">title:</code> untuk menyaring.
         </div>
       </div>
     )
@@ -120,62 +64,28 @@ const SearchPage = () => {
 
   return (
     <div className="container-app py-6 sm:py-8">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="section-title">Hasil pencarian</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div>
+          <h1 className="section-title">Hasil pencarian</h1>
+          {!loading && !error && items.length > 0 && (
+            <p className="mt-1 pl-3.5 text-xs text-slate-500">{items.length} judul ditemukan</p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => void reload()}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-rose-300 hover:text-rose-600 disabled:opacity-60 dark:hover:border-rose-500/50 dark:hover:text-rose-300"
         >
-          Retry
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        {parsed.title && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-xs font-semibold text-slate-700">
-            <span className="text-slate-500">title:</span>
-            {parsed.title}
-            <button
-              type="button"
-              onClick={() => updateQuery({ ...parsed, title: '' })}
-              aria-label="Hapus filter judul"
-              className="rounded-full p-0.5 transition hover:bg-slate-200 hover:text-rose-600"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        )}
-        {parsed.genres.map((genre) => {
-          const unknown = result?.unknownGenres.includes(genre)
-          return (
-            <span
-              key={genre}
-              title={unknown ? 'Genre tidak ditemukan di sumber ini' : undefined}
-              className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-1.5 text-xs font-semibold ${
-                unknown
-                  ? 'bg-amber-500/10 text-amber-700 line-through dark:text-amber-300'
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
-              }`}
-            >
-              <span className="opacity-70">genre:</span>
-              {genre}
-              <button
-                type="button"
-                onClick={() => updateQuery({ ...parsed, genres: parsed.genres.filter((item) => item !== genre) })}
-                aria-label={`Hapus genre ${genre}`}
-                className="rounded-full p-0.5 transition hover:bg-rose-500/15"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          )
-        })}
-      </div>
-
-      {!loading && (result?.unknownGenres.length ?? 0) > 0 && (
-        <p className="mb-4 text-xs text-amber-700 dark:text-amber-300">
-          Genre tidak dikenal di sumber ini: {result?.unknownGenres.join(', ')}. Lihat nama yang tersedia di halaman Genre List.
+      {!loading && unknownGenres.length > 0 && (
+        <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          Genre tidak dikenal di sumber ini: <span className="font-semibold">{unknownGenres.join(', ')}</span>. Lihat
+          nama yang tersedia di halaman Genre List.
         </p>
       )}
 
@@ -185,85 +95,32 @@ const SearchPage = () => {
         </div>
       )}
 
-      {!loading && error && (
-        <ErrorState error={failure} title="Gagal memuat hasil pencarian" onRetry={reload} />
+      {!loading && error && <ErrorState error={failure} title="Gagal memuat hasil pencarian" onRetry={reload} />}
+
+      {!loading && !error && items.length === 0 && (
+        <div className="surface-panel p-4 text-sm text-slate-600">Tidak ada anime yang cocok dengan pencarian ini.</div>
       )}
 
-      {!loading && !error && (data?.length ?? 0) === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-          Tidak ada anime yang cocok dengan pencarian ini.
-        </div>
-      )}
-
-      {!loading && !error && (data?.length ?? 0) > 0 && (
+      {!loading && !error && items.length > 0 && (
         <>
-          <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Filters</span>
-              {statusOptions.map((option) => (
-                <button
-                  key={`status-${option}`}
-                  type="button"
-                  onClick={() => changeFilter(() => setStatusFilter(option))}
-                  className={`rounded-full border px-3 py-1 transition ${
-                    statusFilter === option
-                      ? 'border-rose-300 bg-rose-50 text-rose-600'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600'
-                  }`}
-                >
-                  {option === 'all' ? 'All Status' : option}
-                </button>
-              ))}
-              {seasonOptions.length > 1 && (
-                <div className="flex flex-wrap gap-2">
-                  {seasonOptions.map((option) => (
-                    <button
-                      key={`season-${option}`}
-                      type="button"
-                      onClick={() => changeFilter(() => setSeasonFilter(option))}
-                      className={`rounded-full border px-3 py-1 transition ${
-                        seasonFilter === option
-                          ? 'border-rose-300 bg-rose-50 text-rose-600'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600'
-                      }`}
-                    >
-                      {option === 'all' ? 'All Seasons' : option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              Showing {pagedResults.length ? pageStart + 1 : 0}-{pageStart + pagedResults.length} of{' '}
-              {filteredResults.length} titles
-              {filteredResults.length !== (data?.length ?? 0) && ` (${data?.length ?? 0} total)`}.
-            </p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {pagedResults.map((anime) => (
+              <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
+            ))}
           </div>
-
-          {filteredResults.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              Tidak ada hasil sesuai filter yang dipilih.
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {pagedResults.map((anime) => (
-                  <AnimeCard key={anime.slug ?? anime.title} anime={anime} />
-                ))}
-              </div>
-              <Pagination
-                pagination={{
-                  current_page: currentPage,
-                  last_visible_page: pageCount,
-                  has_next_page: currentPage < pageCount,
-                  next_page: currentPage < pageCount ? currentPage + 1 : null,
-                  has_previous_page: currentPage > 1,
-                  previous_page: currentPage > 1 ? currentPage - 1 : null,
-                }}
-                currentPage={currentPage}
-                onChange={changePage}
-              />
-            </>
+          {pageCount > 1 && (
+            <Pagination
+              pagination={{
+                current_page: currentPage,
+                last_visible_page: pageCount,
+                has_next_page: currentPage < pageCount,
+                next_page: currentPage < pageCount ? currentPage + 1 : null,
+                has_previous_page: currentPage > 1,
+                previous_page: currentPage > 1 ? currentPage - 1 : null,
+              }}
+              currentPage={currentPage}
+              onChange={changePage}
+            />
           )}
         </>
       )}

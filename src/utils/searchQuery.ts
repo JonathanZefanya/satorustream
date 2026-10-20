@@ -39,3 +39,53 @@ export const buildSearchQuery = ({ title, genres }: ParsedQuery): string =>
   [...genres.map(genreToken), title ? `title:${title.includes(' ') ? `"${title}"` : title}` : '']
     .filter(Boolean)
     .join(' ')
+
+export interface QueryChip {
+  key: 'genre' | 'title'
+  value: string
+}
+
+const quoteValue = (value: string) => (/\s/.test(value) ? `"${value}"` : value)
+
+export const chipToken = (chip: QueryChip): string =>
+  chip.key === 'genre' ? genreToken(chip.value) : `title:${quoteValue(chip.value)}`
+
+export const chipFromToken = (key: string, value: string): QueryChip | null => {
+  const normalizedKey = key.toLowerCase()
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (GENRE_KEYS.has(normalizedKey)) return { key: 'genre', value: normalizeGenre(trimmed) }
+  if (TITLE_KEYS.has(normalizedKey)) return { key: 'title', value: trimmed }
+  return null
+}
+
+const sameChip = (a: QueryChip, b: QueryChip) => a.key === b.key && a.value.toLowerCase() === b.value.toLowerCase()
+
+export const addChip = (chips: QueryChip[], chip: QueryChip): QueryChip[] =>
+  chips.some((item) => sameChip(item, chip)) ? chips : [...chips, chip]
+
+/** Pisahkan token `key:value` yang dikenali menjadi chip; sisanya tetap teks bebas. */
+export const splitQuery = (raw: string): { chips: QueryChip[]; text: string } => {
+  let chips: QueryChip[] = []
+  const text = raw.replace(TOKEN_PATTERN, (match, key: string, quoted?: string, bare?: string) => {
+    const chip = chipFromToken(key, quoted ?? bare ?? '')
+    if (!chip) return match
+    chips = addChip(chips, chip)
+    return ' '
+  })
+  return { chips, text: text.replace(/\s+/g, ' ').trim() }
+}
+
+const TRAILING_TOKEN = /(^|\s)([a-z]+):(?:"([^"]*)"|([^\s"]+))\s$/i
+
+/** Token lengkap yang baru diakhiri spasi, untuk diubah menjadi chip saat mengetik. */
+export const takeTrailingChip = (text: string): { chip: QueryChip; rest: string } | null => {
+  const match = text.match(TRAILING_TOKEN)
+  if (!match) return null
+  const chip = chipFromToken(match[2], match[3] ?? match[4] ?? '')
+  if (!chip) return null
+  return { chip, rest: text.slice(0, match.index ?? 0) + (match[1] ?? '') }
+}
+
+export const joinQuery = (chips: QueryChip[], text: string): string =>
+  [...chips.map(chipToken), text.trim()].filter(Boolean).join(' ')
