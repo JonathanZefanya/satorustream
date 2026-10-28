@@ -55,4 +55,35 @@ describe('getDisplayPage', () => {
     await getDisplayPage('t4', fetcher, 1)
     expect(calls.filter((page) => page === 1)).toHaveLength(1)
   })
+
+  it('sumber tanpa total halaman (hanya tombol Next) tetap bisa dijelajahi', async () => {
+    const sizes = Array.from({ length: 12 }, () => 10)
+    let counter = 0
+    const pages = sizes.map((size) => Array.from({ length: size }, () => ({ slug: `n${counter++}` }) as AnimeItem))
+    const fetcher = async (page: number): Promise<PagedItems<AnimeItem>> => {
+      if (page > sizes.length) throw new Error('404')
+      const hasNext = page < sizes.length
+      return {
+        items: pages[page - 1],
+        pagination: {
+          current_page: page,
+          last_visible_page: hasNext ? page + 1 : page,
+          has_next_page: hasNext,
+          next_page: hasNext ? page + 1 : null,
+          has_previous_page: page > 1,
+          previous_page: page > 1 ? page - 1 : null,
+        },
+      }
+    }
+    const first = await getDisplayPage('t5', fetcher, 1)
+    expect(first.items).toHaveLength(24)
+    expect(first.pagination?.has_next_page).toBe(true)
+    const third = await getDisplayPage('t5', fetcher, 3)
+    expect(third.items[0].slug).toBe('n48')
+    const last = await getDisplayPage('t5', fetcher, 5)
+    expect(last.items.map((item) => item.slug)).toEqual(Array.from({ length: 24 }, (_, i) => `n${96 + i}`))
+    expect(last.pagination?.has_next_page).toBe(false)
+    const beyond = await getDisplayPage('t5', fetcher, 7)
+    expect(beyond.items).toHaveLength(0)
+  })
 })

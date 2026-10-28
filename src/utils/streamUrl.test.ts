@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isDirectVideoUrl } from './streamUrl'
+import { isDirectVideoUrl, needsNoReferrer } from './streamUrl'
 
 describe('isDirectVideoUrl', () => {
   it('file mp4/webm diputar dengan <video>', () => {
@@ -20,5 +20,14 @@ describe('isDirectVideoUrl', () => {
     expect(
       isDirectVideoUrl('https://vsys-srv.berkasdrive.com/hal/streaming/abc?name=_Nimegami.id_x_Ep_1_720p.mp4'),
     ).toBe(false)
+  })
+})
+
+describe('needsNoReferrer', () => {
+  it('video berkasdrive diputar langsung tanpa referer', () => {
+    const url = 'https://stream-stor.berkasdrive.com/v/v1.abcDEF_123'
+    expect(needsNoReferrer(url)).toBe(true)
+    expect(isDirectVideoUrl(url)).toBe(true)
+    expect(needsNoReferrer('https://cdn.example.com/a.mp4')).toBe(false)
   })
 })

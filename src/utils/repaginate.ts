@@ -22,6 +22,20 @@ const cachedPage = (key: string, page: number, fetcher: SourcePageFetcher) => {
   return request
 }
 
+const END_OF_LIST: PagedItems<AnimeItem> = { items: [], pagination: null }
+
+/** Halaman di luar jangkauan dibalas 404 oleh sebagian sumber; anggap itu akhir daftar. */
+const pageOrEnd = (key: string, page: number, fetcher: SourcePageFetcher) =>
+  cachedPage(key, page, fetcher).catch(() => END_OF_LIST)
+
+/** Sebagian sumber hanya punya tombol Next tanpa total, jadi batas halaman bertambah seiring dimuat. */
+const lastPageOf = (page: PagedItems<AnimeItem>, number: number) =>
+  Math.max(number, page.pagination?.last_visible_page ?? number, page.pagination?.has_next_page ? number + 1 : number)
+
+const isLastPage = (page: PagedItems<AnimeItem>, number: number) =>
+  page.items.length === 0 ||
+  (!page.pagination?.has_next_page && (page.pagination?.last_visible_page ?? number) <= number)
+
 const itemKey = (anime: AnimeItem) => anime.slug || anime.title || ''
 
 const dedupe = (items: AnimeItem[]) => {
@@ -57,34 +71,45 @@ export const getDisplayPage = async (
 ): Promise<PagedItems<AnimeItem>> => {
   const first = await cachedPage(key, 1, fetcher)
   const sourceSize = Math.max(1, first.items.length)
-  const sourceLast = Math.max(1, first.pagination?.last_visible_page ?? (first.pagination?.has_next_page ? 2 : 1))
+  let knownLast = lastPageOf(first, 1)
 
   const start = (displayPage - 1) * pageSize
-  const firstNeeded = Math.min(sourceLast, Math.floor(start / sourceSize) + 1)
-  let lastNeeded = Math.min(sourceLast, Math.ceil((start + pageSize) / sourceSize))
+  const firstNeeded = Math.floor(start / sourceSize) + 1
+  let lastNeeded = Math.ceil((start + pageSize) / sourceSize)
 
-  const pages = await Promise.all(
-    Array.from({ length: lastNeeded - firstNeeded + 1 }, (_, index) =>
-      cachedPage(key, firstNeeded + index, fetcher),
-    ),
+  const fetched = await Promise.all(
+    Array.from({ length: lastNeeded - firstNeeded + 1 }, (_, index) => {
+      const page = firstNeeded + index
+      return page === 1 ? first : pageOrEnd(key, page, fetcher)
+    }),
   )
 
-  const offset = start - (firstNeeded - 1) * sourceSize
-  let pool = dedupe(pages.flatMap((page) => page.items))
+  let reachedEnd = false
+  let pool: AnimeItem[] = []
+  fetched.forEach((page, index) => {
+    if (reachedEnd) return
+    const number = firstNeeded + index
+    pool.push(...page.items)
+    knownLast = Math.max(knownLast, lastPageOf(page, number))
+    reachedEnd = isLastPage(page, number)
+  })
+  pool = dedupe(pool)
 
-  while (pool.length - offset < pageSize && lastNeeded < sourceLast) {
+  const offset = start - (firstNeeded - 1) * sourceSize
+
+  while (pool.length - offset < pageSize && !reachedEnd) {
     lastNeeded += 1
-    const next = await cachedPage(key, lastNeeded, fetcher)
-    pages.push(next)
+    const next = await pageOrEnd(key, lastNeeded, fetcher)
     pool = dedupe([...pool, ...next.items])
+    knownLast = Math.max(knownLast, lastPageOf(next, lastNeeded))
+    reachedEnd = isLastPage(next, lastNeeded)
   }
 
   const items = pool.slice(Math.max(0, offset), Math.max(0, offset) + pageSize)
 
-  const reachedEnd = lastNeeded >= sourceLast
   const totalItems = reachedEnd
     ? (firstNeeded - 1) * sourceSize + pool.length
-    : (sourceLast - 1) * sourceSize + 1
+    : (knownLast - 1) * sourceSize + 1
   const displayLast = Math.max(displayPage + (reachedEnd ? 0 : 1), Math.ceil(totalItems / pageSize))
 
   return {

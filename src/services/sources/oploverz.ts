@@ -95,7 +95,7 @@ export const oploverzAdapter: SourceAdapter = {
     search: true,
     genres: true,
     schedule: true,
-    animeList: true,
+    animeList: false,
     streaming: true,
     downloadOnly: false,
   },
