@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isDirectVideoUrl, needsNoReferrer } from './streamUrl'
+import { isDirectVideoUrl, isValidPlayerUrl, needsNoReferrer } from './streamUrl'
 
 describe('isDirectVideoUrl', () => {
   it('file mp4/webm diputar dengan <video>', () => {
@@ -29,5 +29,25 @@ describe('needsNoReferrer', () => {
     expect(needsNoReferrer(url)).toBe(true)
     expect(isDirectVideoUrl(url)).toBe(true)
     expect(needsNoReferrer('https://cdn.example.com/a.mp4')).toBe(false)
+  })
+})
+
+describe('isValidPlayerUrl', () => {
+  const origin = 'https://satorustream.example'
+
+  it('URL absolut dari host lain diterima', () => {
+    expect(isValidPlayerUrl('https://s3.animeverse.id/ro/a.mp4', origin)).toBe(true)
+    expect(isValidPlayerUrl('http://localhost:3001/otakudesu/play/video.mp4', 'http://localhost:5173')).toBe(true)
+  })
+
+  it('tautan tersamar, relatif, atau non-http ditolak', () => {
+    expect(isValidPlayerUrl('~NHBtLjIwMTQyNzQzNTA5NzEtNDc0ZA==', origin)).toBe(false)
+    expect(isValidPlayerUrl('/watch/abc', origin)).toBe(false)
+    expect(isValidPlayerUrl('javascript:alert(1)', origin)).toBe(false)
+    expect(isValidPlayerUrl('', origin)).toBe(false)
+  })
+
+  it('URL yang mengarah ke aplikasi ini sendiri ditolak', () => {
+    expect(isValidPlayerUrl('https://satorustream.example/watch/x', origin)).toBe(false)
   })
 })

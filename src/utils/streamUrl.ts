@@ -14,6 +14,23 @@ const hostOf = (url: string): string => {
   }
 }
 
+const currentOrigin = (): string => (typeof window === 'undefined' ? '' : window.location.origin)
+
+/**
+ * URL pemutar harus absolut (http/https) dan bukan dari domain aplikasi ini.
+ * Tautan yang rusak atau tersamar (mis. "~NHBt...") akan dibaca browser sebagai
+ * path relatif, sehingga iframe malah memuat SatoruStream sendiri.
+ */
+export const isValidPlayerUrl = (url: string, origin: string = currentOrigin()): boolean => {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return !origin || parsed.origin !== origin
+  } catch {
+    return false
+  }
+}
+
 /** Server video yang menolak (403) permintaan ber-Referer dari domain lain. */
 const NO_REFERRER_VIDEO_HOSTS = ['stream-stor.berkasdrive.com']
 
